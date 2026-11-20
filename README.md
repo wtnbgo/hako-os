@@ -4,6 +4,12 @@ hako: a Debian trixie (arm64) based environment for game consoles with Qualcomm
 SoCs booted by OpenABL, for deploying our own applications. Current target:
 Retroid Pocket Mini (V1, SM8250). Images are built with ELBE. Every component is a .deb.
 
+![hako on a Retroid Pocket Mini running the raylib sample](docs/images/device-rpmini.jpg)
+
+| launcher: apps | launcher: settings | raylib sample |
+|---|---|---|
+| ![app list](docs/images/launcher-apps.png) | ![settings](docs/images/launcher-settings.png) | ![raylib sample](docs/images/raylib-hello.png) |
+
 | dir | content |
 |---|---|
 | kernel/   | kernel build: pinned upstream + ROCKNIX SM8250 patches/DTS, config fragments -> linux-image .deb |
