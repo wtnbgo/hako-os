@@ -1,0 +1,27 @@
+#!/bin/sh
+# Grow the data partition (file system label "data", the last partition of
+# the image) to the end of the disk, once, on the first boot
+# (hako-grow-data.service). Images are built small and written to bigger
+# cards: move the backup GPT to the end of the disk, grow the partition and
+# the ext4 file system on it (online, /data stays mounted).
+set -eu
+STAMP=/var/lib/hako-base/grow-data.done
+
+part=$(blkid -L data) || { echo "grow-data: no file system labelled 'data'"; exit 0; }
+name=$(basename "$(readlink -f "$part")")
+disk=/dev/$(lsblk -no pkname "/dev/$name")
+num=$(cat "/sys/class/block/$name/partition")
+echo "grow-data: $disk partition $num (/dev/$name)"
+
+sgdisk -e "$disk" >/dev/null
+rc=0
+growpart "$disk" "$num" || rc=$?
+case $rc in
+0) ;;
+1) echo "grow-data: partition already fills the disk" ;;   # NOCHANGE
+*) echo "grow-data: growpart failed ($rc)" >&2; exit 1 ;;
+esac
+resize2fs "/dev/$name"
+mkdir -p "$(dirname "$STAMP")"
+touch "$STAMP"
+df -h "/dev/$name"

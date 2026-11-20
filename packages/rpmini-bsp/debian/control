@@ -1,0 +1,30 @@
+Source: rpmini-bsp
+Section: misc
+Priority: optional
+Maintainer: hako-os <hako@hako-os>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: rpmini-bsp
+Architecture: all
+Depends: ${misc:Depends},
+ linux-image-7.2.0-rpmini,
+ initramfs-tools,
+ systemd,
+ alsa-ucm-conf,
+ alsa-utils,
+ firmware-atheros,
+ firmware-qcom-soc
+Breaks: rpmini-session (<< 0.2.0)
+Replaces: rpmini-session (<< 0.2.0)
+Description: Retroid Pocket Mini board support for hako
+ Board support for the Retroid Pocket Mini (SM8250) booted by OpenABL:
+  - installs the kernel, initrd and DTBs to the FAT boot partition and
+    writes the Boot Loader Specification entry (rpmini-update-esp)
+  - ALSA UCM profile for the speakers / headphones (from ROCKNIX) and the
+    WirePlumber settings for it
+  - USB-C device mode: CDC-NCM network (192.168.7.2) and CDC-ACM serial
+  - built-in pad and touch panel (udev rules), the session defaults for the
+    portrait panel and the pad (/usr/lib/hako/session.d/10-rpmini.sh) and
+    the volume keys without PipeWire (/usr/lib/hako/hw/volume)

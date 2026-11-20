@@ -1,0 +1,22 @@
+/build/
+/out/
+/repo/db/
+/repo/dists/
+/repo/pool/
+/kernel/src/
+/kernel/rocknix/
+*.deb
+*.buildinfo
+*.changes
+*.img
+*.img.*
+elbe/elbe-repodir-*.xml
+# package build leftovers (dpkg-buildpackage -tc removes them; they exist while building)
+packages/*/obj-*/
+packages/*/debian/.debhelper/
+packages/*/debian/debhelper-build-stamp
+packages/*/debian/*.debhelper.log
+packages/*/debian/*.substvars
+packages/*/debian/files
+packages/*/debian/hako-*/
+packages/*/debian/rpmini-*/

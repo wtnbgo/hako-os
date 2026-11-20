@@ -1,0 +1,23 @@
+#!/bin/sh
+# Ask hako-launcher to start a registered application, for development
+# tools that deploy an app over ssh (run as root or as the session user).
+# An app that is running is closed first, as with a long HOME press.
+#
+#   launch-app <id>     id = file name of the .app without ".app"
+set -e
+[ $# -eq 1 ] || { echo "usage: $0 <app id>" >&2; exit 2; }
+# check first: the launcher closes the running app before it reads the request
+[ -f "/data/dev/apps/$1.app" ] || [ -f "/usr/share/hako/apps/$1.app" ] || {
+	echo "no such app: $1 (/data/dev/apps/$1.app, /usr/share/hako/apps/$1.app)" >&2
+	exit 1
+}
+pid=$(pgrep -o -x hako-launcher) || {
+	echo "hako-launcher is not running (is /data/dev/session.env replacing it?)" >&2
+	exit 1
+}
+uid=$(stat -c %u /proc/"$pid")
+req=/run/user/$uid/hako-launch
+printf '%s\n' "$1" >"$req.tmp"
+chown "$uid" "$req.tmp"
+mv -f "$req.tmp" "$req"
+kill -USR2 "$pid"

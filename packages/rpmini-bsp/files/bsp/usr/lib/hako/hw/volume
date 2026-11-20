@@ -1,0 +1,26 @@
+#!/bin/sh
+# Retroid Pocket Mini: volume keys without PipeWire (called by
+# /usr/lib/hako/volume): volume up|down. Steps the hardware gain of the
+# speaker (WSA881x digital gain) and the headphones (WCD938x HPH gain);
+# alsa-restore keeps the level across reboots.
+case "$1" in
+up)   s=1 ;;
+down) s=-1 ;;
+*) echo "usage: $0 up|down" >&2; exit 2 ;;
+esac
+
+CARD=${RPMINI_SND_CARD:-0}
+SPK_STEP=3; SPK_MIN=0; SPK_MAX=84     # WSA_RXn Digital Volume: 84 = 0 dB, 1 dB/step
+HP_STEP=1;  HP_MIN=0;  HP_MAX=24      # HPHL/HPHR Volume
+
+get() { amixer -c "$CARD" cget "name=$1" 2>/dev/null | sed -n 's/^  : values=\([0-9]*\).*/\1/p'; }
+adj() { # name delta min max
+	cur=$(get "$1"); [ -n "$cur" ] || return 0
+	new=$((cur + $2))
+	[ "$new" -lt "$3" ] && new=$3
+	[ "$new" -gt "$4" ] && new=$4
+	[ "$new" -ne "$cur" ] && amixer -q -c "$CARD" cset "name=$1" "$new"
+	return 0
+}
+for c in 'WSA_RX0 Digital Volume' 'WSA_RX1 Digital Volume'; do adj "$c" $((s * SPK_STEP)) $SPK_MIN $SPK_MAX; done
+for c in 'HPHL Volume' 'HPHR Volume'; do adj "$c" $((s * HP_STEP)) $HP_MIN $HP_MAX; done

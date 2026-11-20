@@ -1,0 +1,5 @@
+hako-raylib-hello (0.1.0) trixie; urgency=medium
+
+  * Initial package: raylib 6.2 (SDL3 platform) sample.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 23:00:00 +0900

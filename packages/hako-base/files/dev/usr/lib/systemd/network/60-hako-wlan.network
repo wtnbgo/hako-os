@@ -1,0 +1,9 @@
+# Wi-Fi in the development image. iwd only authenticates; networkd does DHCP.
+#   iwctl station wlan0 connect <SSID>
+[Match]
+Name=wlan*
+WLANInterfaceType=station
+
+[Network]
+DHCP=yes
+IPv6AcceptRA=yes

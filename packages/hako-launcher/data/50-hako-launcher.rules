@@ -1,0 +1,12 @@
+// hako-launcher: the game session user may power off, reboot and suspend
+// the console (also while ssh sessions are open) and set the time zone from
+// the settings screen.
+polkit.addRule(function(action, subject) {
+	if (subject.user == "hako" &&
+	    (action.id.indexOf("org.freedesktop.login1.power-off") == 0 ||
+	     action.id.indexOf("org.freedesktop.login1.reboot") == 0 ||
+	     action.id.indexOf("org.freedesktop.login1.suspend") == 0 ||
+	     action.id == "org.freedesktop.timedate1.set-timezone")) {
+		return polkit.Result.YES;
+	}
+});

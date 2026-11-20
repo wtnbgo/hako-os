@@ -1,0 +1,30 @@
+[Unit]
+Description=hako game session (full screen app on tty1)
+Documentation=file:/usr/lib/hako/session-run
+After=systemd-user-sessions.service systemd-logind.service getty@tty1.service
+Conflicts=getty@tty1.service
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=hako
+WorkingDirectory=~
+# A logind session on tty1 (seat0): grants the DRM and input devices to the
+# user (uaccess) and sets XDG_RUNTIME_DIR.
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+ExecStart=/usr/lib/hako/session-run
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=graphical.target

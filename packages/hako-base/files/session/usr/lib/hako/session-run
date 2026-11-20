@@ -1,0 +1,61 @@
+#!/bin/sh
+# Start the game application for hako-session.service.
+#
+#   /usr/lib/hako/session.d/*.sh  board defaults (panel rotation, pad mapping),
+#                                 installed by the board support package
+#   /etc/default/hako-session     environment (SDL hints, HAKO_APP, HAKO_APP_ARGS)
+#   /etc/hako/session.d/*.sh      more environment (sourced in order)
+#   /usr/bin/hako-app             the app: a Debian alternative, highest priority wins
+#                                 (update-alternatives --config hako-app)
+set -a
+for f in /usr/lib/hako/session.d/*.sh; do
+	[ -r "$f" ] && . "$f"
+done
+[ -r /etc/default/hako-session ] && . /etc/default/hako-session
+for f in /etc/hako/session.d/*.sh; do
+	[ -r "$f" ] && . "$f"
+done
+set +a
+
+# HAKO_PAD_LAYOUT=label: swap a<->b and x<->y in the pad mappings so a/b/x/y
+# follow the printed letters on Nintendo-layout pads; face:abxy keeps
+# SDL_GetGamepadButtonLabel right. Default (position) is SDL's own convention.
+if [ "${HAKO_PAD_LAYOUT:-position}" = label ] && [ -n "${SDL_GAMECONTROLLERCONFIG:-}" ]; then
+	SDL_GAMECONTROLLERCONFIG=$(printf '%s\n' "$SDL_GAMECONTROLLERCONFIG" | awk '
+		BEGIN { FS = OFS = "," }
+		NF > 2 {
+			face = 0
+			for (i = 3; i <= NF; i++) {
+				k = substr($i, 1, 2); v = substr($i, 3)
+				if (k == "a:") $i = "b:" v
+				else if (k == "b:") $i = "a:" v
+				else if (k == "x:") $i = "y:" v
+				else if (k == "y:") $i = "x:" v
+				else if ($i ~ /^face:/) { $i = "face:abxy"; face = 1 }
+			}
+			if (!face) $0 = $0 (substr($0, length($0)) == "," ? "" : ",") "face:abxy,"
+		}
+		{ print }')
+	export SDL_GAMECONTROLLERCONFIG
+fi
+
+APP=${HAKO_APP:-/usr/bin/hako-app}
+if [ ! -x "$APP" ]; then
+	echo "hako-session: no application at $APP, idling" >&2
+	exec sleep infinity
+fi
+# run from the application's directory: engines resolve relative asset paths
+# against the current directory (Siv3D: assets/...)
+cd "$(dirname "$(readlink -f "$APP")")" || exit 1
+echo "hako-session: starting $APP $HAKO_APP_ARGS (in $PWD)" >&2
+# Optional kiosk compositor: cage rotates the output by HAKO_ROTATE (portrait
+# panels) and the app runs as a Wayland client
+if [ "${HAKO_COMPOSITOR:-}" = cage ]; then
+	export HAKO_ROTATE="${HAKO_ROTATE:-0}"
+	# shellcheck disable=SC2086
+	exec cage -d -- /usr/lib/hako/session-app "$APP" $HAKO_APP_ARGS
+fi
+
+# HAKO_APP_ARGS is split on purpose
+# shellcheck disable=SC2086
+exec "$APP" $HAKO_APP_ARGS

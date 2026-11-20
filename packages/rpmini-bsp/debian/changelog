@@ -1,0 +1,121 @@
+rpmini-bsp (0.2.1) trixie; urgency=medium
+
+  * Pad mapping: ZL/ZR (lefttrigger/righttrigger) were swapped.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 23:30:00 +0900
+
+rpmini-bsp (0.2.0) trixie; urgency=medium
+
+  * The OS side is now "hako": the session and development packages moved to
+    hako-base (hako-session, hako-dev). This package keeps the board support
+    only and adds /usr/lib/hako/session.d/10-rpmini.sh (HAKO_ROTATE=270, pad
+    mapping) and /usr/lib/hako/hw/volume.
+  * Touch rotation rule and WirePlumber settings moved here from the session.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 20:00:00 +0900
+
+rpmini-bsp (0.1.14) trixie; urgency=medium
+
+  * rpmini-session: document RPMINI_LANGUAGE (launcher UI language).
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 16:00:00 +0900
+
+rpmini-bsp (0.1.13) trixie; urgency=medium
+
+  * rpmini-session: SIV3D_FULLSCREEN=1 so Siv3D apps start full screen.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 12:00:00 +0900
+
+rpmini-bsp (0.1.12) trixie; urgency=medium
+
+  * rpmini-session: rotate the touch panel for cage with a libinput
+    calibration matrix (udev rule), matching RPMINI_ROTATE=270.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 11:00:00 +0900
+
+rpmini-bsp (0.1.11) trixie; urgency=medium
+
+  * rpmini-session: cage is the standard compositor (RPMINI_COMPOSITOR=cage,
+    RPMINI_ROTATE=270; 90 is upside down); cage and wlr-randr are now dependencies.
+  * session-app: export RPMINI_ROTATE=0 to the app so it does not rotate twice.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 09:00:00 +0900
+
+rpmini-bsp (0.1.9) trixie; urgency=medium
+
+  * rpmini-session: start the app in its own directory (relative asset paths).
+  * rpmini-session: optional kiosk compositor (RPMINI_COMPOSITOR=cage) that
+    rotates the portrait panel by RPMINI_ROTATE so apps run in landscape.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 04:00:00 +0900
+
+rpmini-bsp (0.1.8) trixie; urgency=medium
+
+  * rpmini-session: SDL gamepad mapping for the built-in pad; the automatic
+    Linux mapping swapped the top (X) and left (Y) buttons.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 03:20:00 +0900
+
+rpmini-bsp (0.1.7) trixie; urgency=medium
+
+  * udev: keep the WCD938x SoundWire devices out of runtime suspend so the
+    headphone jack is detected (from ROCKNIX).
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 03:00:00 +0900
+
+rpmini-bsp (0.1.6) trixie; urgency=medium
+
+  * rpmini-session: PipeWire + WirePlumber in the session. WirePlumber config:
+    S16LE on the q6 front ends (S24_LE played ~48 dB too quiet), fixed hardware
+    gain (soft-mixer), 70 % initial volume.
+  * Volume keys change the PipeWire volume of the default output; hardware
+    gain only as a fallback without PipeWire.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 02:30:00 +0900
+
+rpmini-bsp (0.1.5) trixie; urgency=medium
+
+  * New package rpmini-session: rpmini-session.service runs /usr/bin/rpmini-app
+    (alternative) full screen on tty1 as user "rpmini" and restarts it.
+  * rpmini-dev: /data/dev/session.env can override the session application.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 01:30:00 +0900
+
+rpmini-bsp (0.1.4) trixie; urgency=medium
+
+  * udev: mark the built-in pad as a joystick (input_id took it for a mouse,
+    so SDL did not see a gamepad).
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 00:45:00 +0900
+
+rpmini-bsp (0.1.3) trixie; urgency=medium
+
+  * rpmini-dev: apt source for the PC repository through the reverse SSH
+    tunnel of scripts/dev-update.sh (127.0.0.1:8780).
+  * Do not stop or restart rpmini-usb-gadget on upgrade (it cut the USB
+    link that the upgrade itself was running over).
+
+ -- hako-os <hako@hako-os>  Thu, 19 Nov 2026 23:55:00 +0900
+
+rpmini-bsp (0.1.2) trixie; urgency=medium
+
+  * UCM: lower the default speaker level (WSA digital -6 dB, PA 0 dB);
+    full scale through raw ALSA was far too loud.
+  * rpmini-dev: depend on iproute2.
+  * Volume keys: triggerhappy runs /usr/lib/rpmini/volume (speaker + headphone).
+
+ -- hako-os <hako@hako-os>  Thu, 19 Nov 2026 23:30:00 +0900
+
+rpmini-bsp (0.1.1) trixie; urgency=medium
+
+  * rpmini-dev: do not ship /etc/iwd/main.conf (owned by iwd); configure
+    wlan with a systemd-networkd .network file instead.
+
+ -- hako-os <hako@hako-os>  Thu, 19 Nov 2026 12:00:00 +0900
+
+rpmini-bsp (0.1.0) trixie; urgency=medium
+
+  * Initial package: ESP/BLS installer, ALSA UCM, USB gadget (NCM + ACM),
+    development meta package.
+
+ -- hako-os <hako@hako-os>  Thu, 19 Nov 2026 10:00:00 +0900

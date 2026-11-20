@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_installsystemd:
+	# never restart the gadget on upgrade: it drops the USB link that the upgrade runs over
+	dh_installsystemd -prpmini-bsp --no-stop-on-upgrade --no-restart-after-upgrade rpmini-usb-gadget.service
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 0755 \
+		debian/rpmini-bsp/usr/sbin/rpmini-update-esp \
+		debian/rpmini-bsp/usr/lib/rpmini/usb-gadget \
+		debian/rpmini-bsp/usr/lib/hako/hw/volume \
+		debian/rpmini-bsp/etc/kernel/postinst.d/zz-rpmini-esp \
+		debian/rpmini-bsp/etc/initramfs/post-update.d/zz-rpmini-esp

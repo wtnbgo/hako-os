@@ -1,0 +1,28 @@
+Source: hako-launcher
+Section: games
+Priority: optional
+Maintainer: hako-os <hako@hako-os>
+Build-Depends: debhelper-compat (= 13), libsdl3-dev, libsdl3-ttf-dev, libsdl3-image-dev, pkgconf
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: hako-launcher
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ fonts-noto-cjk,
+ wireplumber,
+ systemd,
+ polkitd,
+ triggerhappy,
+ procps
+Conflicts: rpmini-launcher
+Replaces: rpmini-launcher
+Description: Home screen of the hako game console
+ Lists the registered applications (/usr/share/hako/apps/*.app and, for
+ development, /data/dev/apps/*.app), starts the selected one and comes back
+ when it exits. Holding HOME closes the running application. The settings
+ tab changes the volume, the screen brightness, the language and the time
+ zone, shows system information and powers off or reboots the console.
+ .
+ Registers itself as the hako-app alternative, so hako-session starts it
+ at boot.

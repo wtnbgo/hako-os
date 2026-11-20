@@ -1,0 +1,33 @@
+# Environment of the game session (sourced by /usr/lib/hako/session-run after
+# the board defaults in /usr/lib/hako/session.d/*.sh, which set e.g. the panel
+# rotation HAKO_ROTATE and the built-in pad mapping; override them here).
+
+# without a compositor (HAKO_COMPOSITOR empty) SDL draws straight to KMS/DRM;
+# under cage session-app switches it to wayland
+SDL_VIDEO_DRIVER=kmsdrm
+
+# Kiosk compositor (standard: cage). cage rotates the output by HAKO_ROTATE
+# degrees (wlr-randr transform: 0 / 90 / 180 / 270) so the app sees a landscape
+# Wayland output. Empty: the app draws straight to KMS/DRM and has to rotate
+# by itself (apps get HAKO_ROTATE).
+HAKO_COMPOSITOR=cage
+#HAKO_ROTATE=0
+
+# Siv3D (SDL3 build): start in full screen, the scene is scaled to the screen.
+# krkrz: pass the game's own option, e.g. -fullscreen=yes in the .app Args.
+SIV3D_FULLSCREEN=1
+
+# Face buttons of the gamepad (pads with a mapping in SDL_GAMECONTROLLERCONFIG,
+# e.g. the built-in pad from the board defaults):
+#   position  SDL standard: a/b/x/y are bottom/right/left/top whatever is printed
+#   label     a/b/x/y follow the printed letters (Nintendo-style A on the right)
+# hako-launcher always follows the printed letters (A: OK, B: back).
+#HAKO_PAD_LAYOUT=position
+
+# Default UI language of hako-launcher (ja / en) until it is chosen in its
+# settings; apps started from the launcher get it as HAKO_LANGUAGE.
+#HAKO_LANGUAGE=ja
+
+# Application to run instead of the /usr/bin/hako-app alternative, and its arguments.
+#HAKO_APP=
+#HAKO_APP_ARGS=

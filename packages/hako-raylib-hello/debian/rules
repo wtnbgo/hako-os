@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+# raylib is the git submodule ./raylib (pinned release tag).
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=Release

@@ -1,0 +1,20 @@
+Source: hako-love
+Section: games
+Priority: optional
+Maintainer: hako <hako@localhost>
+Build-Depends: debhelper-compat (= 13), cmake, pkgconf,
+ libsdl3-dev, libluajit-5.1-dev, libfreetype-dev, libharfbuzz-dev,
+ libopenal-dev, libmodplug-dev, libtheora-dev, libvorbis-dev, libogg-dev,
+ zlib1g-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: hako-love
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: love, liblove0
+Replaces: love, liblove0
+Description: LÖVE 12 (SDL3) game framework for hako
+ LÖVE built from an upstream development snapshot (12.0, SDL3).
+ Debian ships 11.x, which is SDL2-based; this package replaces it.
+ Games run as `love <game dir or .love>` from a hako .app file.

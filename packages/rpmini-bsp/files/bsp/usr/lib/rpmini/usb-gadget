@@ -1,0 +1,86 @@
+#!/bin/sh
+# USB-C device mode: one composite gadget with
+#   - CDC-NCM network  -> usb0  (device 192.168.7.2, host gets an address by DHCP)
+#   - CDC-ACM serial   -> /dev/ttyGS0 (console in the dev image)
+# Windows 10/11 binds both with inbox drivers (UsbNcm, usbser).
+#
+#   usb-gadget start | stop
+set -e
+
+G=/sys/kernel/config/usb_gadget/rpmini
+CONF=/etc/default/rpmini-usb-gadget
+FUNCTIONS="ncm acm"
+[ -r "$CONF" ] && . "$CONF"
+
+mac_from() {
+	# stable, locally administered MAC derived from machine-id + a salt
+	printf '%s%s' "$(cat /etc/machine-id 2>/dev/null)" "$1" | sha256sum |
+		sed -E 's/^(..)(..)(..)(..)(..).*/02:\1:\2:\3:\4:\5/'
+}
+
+start() {
+	mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
+	[ -d "$G" ] && stop
+	udc=$(ls /sys/class/udc 2>/dev/null | head -n1)
+	[ -n "$udc" ] || { echo "usb-gadget: no UDC" >&2; exit 1; }
+
+	mkdir -p "$G"
+	echo 0x1d6b > "$G/idVendor"     # Linux Foundation
+	echo 0x0104 > "$G/idProduct"    # Multifunction Composite Gadget
+	echo 0x0100 > "$G/bcdDevice"
+	echo 0x0200 > "$G/bcdUSB"
+	echo 0xEF > "$G/bDeviceClass"   # Misc / IAD, needed for composite on Windows
+	echo 0x02 > "$G/bDeviceSubClass"
+	echo 0x01 > "$G/bDeviceProtocol"
+
+	mkdir -p "$G/strings/0x409"
+	tr -d '\0' < /sys/firmware/devicetree/base/model > "$G/strings/0x409/product" 2>/dev/null ||
+		echo "Retroid Pocket Mini" > "$G/strings/0x409/product"
+	echo "rpmini-os" > "$G/strings/0x409/manufacturer"
+	cut -c1-16 /etc/machine-id > "$G/strings/0x409/serialnumber" 2>/dev/null || true
+
+	mkdir -p "$G/configs/c.1/strings/0x409"
+	echo "NCM + ACM" > "$G/configs/c.1/strings/0x409/configuration"
+	echo 250 > "$G/configs/c.1/MaxPower"
+
+	# Windows: MS OS descriptors so UsbNcm binds without an .inf
+	echo 1 > "$G/os_desc/use"
+	echo 0xcd > "$G/os_desc/b_vendor_code"
+	echo MSFT100 > "$G/os_desc/qw_sign"
+
+	for f in $FUNCTIONS; do
+		case $f in
+		ncm)
+			mkdir -p "$G/functions/ncm.usb0"
+			mac_from host > "$G/functions/ncm.usb0/host_addr"
+			mac_from dev > "$G/functions/ncm.usb0/dev_addr"
+			echo WINNCM > "$G/functions/ncm.usb0/os_desc/interface.ncm/compatible_id"
+			ln -s "$G/functions/ncm.usb0" "$G/configs/c.1/"
+			;;
+		acm)
+			mkdir -p "$G/functions/acm.GS0"
+			ln -s "$G/functions/acm.GS0" "$G/configs/c.1/"
+			;;
+		esac
+	done
+	ln -s "$G/configs/c.1" "$G/os_desc/c.1"
+
+	echo "$udc" > "$G/UDC"
+	echo "usb-gadget: bound to $udc ($FUNCTIONS)"
+}
+
+stop() {
+	[ -d "$G" ] || return 0
+	echo "" > "$G/UDC" 2>/dev/null || true
+	rm -f "$G/os_desc/c.1"
+	for l in "$G"/configs/c.1/*.*; do [ -L "$l" ] && rm -f "$l"; done
+	rmdir "$G"/configs/c.1/strings/0x409 "$G"/configs/c.1 2>/dev/null || true
+	for f in "$G"/functions/*; do [ -d "$f" ] && rmdir "$f"; done
+	rmdir "$G/strings/0x409" "$G" 2>/dev/null || true
+}
+
+case "$1" in
+	start) start ;;
+	stop) stop ;;
+	*) echo "usage: $0 start|stop" >&2; exit 2 ;;
+esac

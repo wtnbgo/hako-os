@@ -1,0 +1,89 @@
+Source: hako-base
+Section: misc
+Priority: optional
+Maintainer: hako-os <hako@hako-os>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: hako-base
+Architecture: all
+Depends: ${misc:Depends},
+ systemd,
+ util-linux,
+ gdisk,
+ cloud-guest-utils,
+ e2fsprogs
+Description: hako base system
+ System parts of hako that do not depend on the board or the session:
+  - on the first boot, grow the data partition (file system label "data")
+    to the end of the disk (hako-grow-data.service), so a small image can be
+    written to any bigger card
+
+Package: hako-session
+Architecture: all
+Depends: ${misc:Depends},
+ hako-base,
+ systemd,
+ libpam-systemd,
+ dbus,
+ pipewire,
+ wireplumber,
+ pipewire-alsa,
+ cage,
+ wlr-randr,
+ triggerhappy
+Conflicts: rpmini-session
+Replaces: rpmini-session, rpmini-bsp (<< 0.2.0)
+Description: hako game session
+ Starts the game application full screen on tty1 at boot as the
+ unprivileged user "hako" and restarts it when it exits. The application
+ is the /usr/bin/hako-app alternative (normally hako-launcher); app
+ packages register themselves with update-alternatives.
+ .
+ Runs it in the kiosk compositor cage, rotated by HAKO_ROTATE for portrait
+ panels. Board defaults come from /usr/lib/hako/session.d/*.sh of the board
+ support package. Sound goes through PipeWire / WirePlumber in the session;
+ the volume keys change the PipeWire volume (triggerhappy).
+
+Package: hako-dev
+Architecture: all
+Depends: ${misc:Depends},
+ hako-session,
+ openssh-server,
+ sudo,
+ gdbserver,
+ strace,
+ rsync,
+ iproute2,
+ evtest,
+ alsa-utils,
+ libinput-tools,
+ i2c-tools,
+ usbutils,
+ iw,
+ iwd,
+ systemd-resolved,
+ rfkill,
+ less,
+ vim-tiny,
+ htop,
+ file,
+ curl,
+ ca-certificates,
+ libgl1-mesa-dri,
+ mesa-vulkan-drivers,
+ mesa-utils,
+ mesa-utils-bin,
+ vulkan-tools,
+ kmscube,
+ libsdl3-0,
+ libsdl3-tests,
+ grim
+Conflicts: rpmini-dev
+Replaces: rpmini-dev
+Description: hako development environment
+ Tools and settings for the development image: ssh, gdbserver, GPU / input /
+ audio test tools, SDL3, screenshots (grim), a root shell on the USB serial
+ console (ttyGS0) and the
+ /data/dev/session.env override of the session. Not for release images.

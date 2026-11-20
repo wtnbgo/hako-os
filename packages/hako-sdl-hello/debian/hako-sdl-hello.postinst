@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+	update-alternatives --install /usr/bin/hako-app hako-app /usr/bin/hako-sdl-hello 10
+fi
+#DEBHELPER#

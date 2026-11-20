@@ -1,0 +1,11 @@
+#!/bin/sh
+# Runs inside cage (see session-run): rotate the output, then start the app
+# as a Wayland client. Usage: session-app APP [ARGS...]
+if [ -n "${HAKO_ROTATE:-}" ] && [ "$HAKO_ROTATE" != 0 ]; then
+	out=$(wlr-randr | awk 'NR == 1 { print $1 }')
+	wlr-randr --output "$out" --transform "$HAKO_ROTATE" || echo "session-app: rotation failed" >&2
+fi
+# the output is already rotated: apps that honour HAKO_ROTATE must not rotate again
+export HAKO_ROTATE=0
+export SDL_VIDEO_DRIVER=wayland
+exec "$@"

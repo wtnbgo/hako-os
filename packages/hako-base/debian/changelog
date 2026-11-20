@@ -1,0 +1,48 @@
+hako-base (0.2.5) trixie; urgency=medium
+
+  * hako-dev: description no longer mentions the PC package repository
+    (dev-update.sh adds that source only while it runs).
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 00:00:00 +0900
+
+hako-base (0.2.4) trixie; urgency=medium
+
+  * hako-dev: stop the ttyGS0 serial getty after 3 s. Its autologin root
+    shell ignores SIGTERM, so every shutdown waited the default 90 s.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 23:30:00 +0900
+
+hako-base (0.2.3) trixie; urgency=medium
+
+  * hako-dev: drop /etc/apt/sources.list.d/hako-dev.list. The PC repository
+    (127.0.0.1:8780) is only reachable while scripts/dev-update.sh runs, and
+    the permanent entry broke apt in the ELBE image build. dev-update.sh now
+    adds the entry for the duration of its run.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 23:00:00 +0900
+
+hako-base (0.2.2) trixie; urgency=medium
+
+  * hako-session: HAKO_PAD_LAYOUT=position|label selects whether a/b/x/y of
+    mapped pads follow positions (SDL default) or the printed letters.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 22:00:00 +0900
+
+hako-base (0.2.1) trixie; urgency=medium
+
+  * New package hako-base: grow the data partition to the end of the disk on
+    the first boot (hako-grow-data.service). hako-session depends on it.
+  * hako-dev: create /data/dev/apps (tmpfiles).
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 21:00:00 +0900
+
+hako-base (0.2.0) trixie; urgency=medium
+
+  * hako-session and hako-dev, split from rpmini-bsp (were rpmini-session and
+    rpmini-dev): user hako, /usr/lib/hako, /etc/default/hako-session, HAKO_*
+    variables. Board defaults are read from /usr/lib/hako/session.d/*.sh.
+  * The volume keys handler moved here (/usr/lib/hako/volume).
+  * hako-dev depends on grim (screenshots of the session).
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 20:00:00 +0900
+

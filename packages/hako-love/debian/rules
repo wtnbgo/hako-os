@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+# Upstream source is the git submodule ./love (pinned commit).
+%:
+	dh $@ --buildsystem=cmake --sourcedirectory=love
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=Release -DLOVE_JIT=ON

@@ -1,0 +1,6 @@
+# Settings for rpmini-update-esp (boot entry written to the ESP for OpenABL)
+ESP=/boot/efi
+ENTRY=rpmini
+TITLE="rpmini (Debian)"
+DTB=qcom/sm8250-retroidpocket-rpmini.dtb
+CMDLINE="root=PARTLABEL=rootA rw rootwait console=tty0"

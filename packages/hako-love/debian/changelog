@@ -1,0 +1,5 @@
+hako-love (12.0~git20261105.def2451-1) trixie; urgency=medium
+
+  * Initial package: LÖVE main branch def2451 (12.0, SDL3), LuaJIT.
+
+ -- hako <hako@localhost>  Fri, 20 Nov 2026 15:00:00 +0900

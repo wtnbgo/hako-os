@@ -1,0 +1,15 @@
+Source: hako-raylib-hello
+Section: games
+Priority: optional
+Maintainer: hako <hako@localhost>
+Build-Depends: debhelper-compat (= 13), cmake, pkgconf, libsdl3-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: hako-raylib-hello
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: raylib (SDL3) sample for hako
+ A small 3D scene with gamepad, touch and sound, built with raylib (from a
+ pinned upstream release, statically) on its SDL3 platform. Registered in
+ hako-launcher as "raylib Sample".

@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_installsystemd:
+	dh_installsystemd -phako-session hako-session.service
+	# runs on the next boot (first boot of an image), not while installing
+	dh_installsystemd -phako-base --no-start hako-grow-data.service
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 0755 \
+		debian/hako-base/usr/lib/hako/grow-data \
+		debian/hako-session/usr/lib/hako/session-run \
+		debian/hako-session/usr/lib/hako/session-app \
+		debian/hako-session/usr/lib/hako/volume

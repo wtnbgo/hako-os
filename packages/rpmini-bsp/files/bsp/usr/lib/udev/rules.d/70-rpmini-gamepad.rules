@@ -1,0 +1,4 @@
+# The built-in pad (retroid serial MCU driver) reports ABS_X/ABS_Y without the
+# usual joystick buttons, so input_id classifies it as a mouse. Mark it as a
+# joystick so SDL, libinput and friends treat it as a gamepad.
+SUBSYSTEM=="input", KERNEL=="event*|js*", ATTRS{name}=="Retroid Pocket Gamepad", ENV{ID_INPUT_MOUSE}="", ENV{ID_INPUT_JOYSTICK}="1"

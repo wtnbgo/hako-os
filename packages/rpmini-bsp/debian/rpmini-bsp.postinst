@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+	# usb0 (and wlan0 in the dev image) are configured by systemd-networkd
+	deb-systemd-helper enable systemd-networkd.service >/dev/null || true
+	# Put the newest installed rpmini kernel on the ESP (no-op if none yet)
+	rpmini-update-esp || true
+fi
+#DEBHELPER#

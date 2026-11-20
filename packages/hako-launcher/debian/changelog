@@ -1,0 +1,45 @@
+hako-launcher (0.2.1) trixie; urgency=medium
+
+  * Pass LANG=C.UTF-8 to apps when the language's locale is not
+    installed.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 17:18:16 +0900
+
+hako-launcher (0.2.0) trixie; urgency=medium
+
+  * Renamed from rpmini-launcher (hako): user hako, /usr/share/hako/apps,
+    /usr/lib/hako/launch-app, HAKO_LANGUAGE / HAKO_ROTATE, ~/.config/hako.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 20:00:00 +0900
+
+hako-launcher (0.1.3) trixie; urgency=medium
+
+  * Settings: time zone (systemd-timedated; polkit rule extended).
+  * /usr/lib/hako/launch-app <id>: start a registered app from outside
+    (SIGUSR2), for development tools that deploy over ssh.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 18:00:00 +0900
+
+hako-launcher (0.1.2) trixie; urgency=medium
+
+  * Japanese / English UI (settings: Language). The choice is kept in
+    ~/.config/hako/language; started apps get HAKO_LANGUAGE, LANGUAGE
+    and LANG. .app files may carry Name[en]= / Description[en]= etc.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 16:00:00 +0900
+
+hako-launcher (0.1.1) trixie; urgency=medium
+
+  * Settings: play a short tone when the volume changes.
+  * Set the process name to hako-launcher (the session starts it as
+    hako-app), so the HOME button finds it.
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 15:00:00 +0900
+
+hako-launcher (0.1.0) trixie; urgency=medium
+
+  * Initial release: app list (.app files), start / return, HOME hold to
+    close the running app, settings (volume, brightness, system information,
+    reboot, power off).
+
+ -- hako-os <hako@hako-os>  Fri, 20 Nov 2026 14:00:00 +0900

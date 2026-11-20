@@ -1,0 +1,16 @@
+Source: hako-sdl-hello
+Section: games
+Priority: optional
+Maintainer: hako-os <hako@hako-os>
+Build-Depends: debhelper-compat (= 13), libsdl3-dev, pkgconf
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: hako-sdl-hello
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: rpmini-sdl-hello
+Replaces: rpmini-sdl-hello
+Description: SDL3 sample for hako
+ Draws a landscape canvas (rotated by itself on a bare portrait panel)
+ and visualises the gamepad, the touch panel and a little animation.

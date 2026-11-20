@@ -1,0 +1,13 @@
+[Unit]
+Description=hako: grow the data partition to the end of the disk (first boot)
+Documentation=file:/usr/lib/hako/grow-data
+RequiresMountsFor=/data
+ConditionPathExists=!/var/lib/hako-base/grow-data.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/hako/grow-data
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

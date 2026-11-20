@@ -1,0 +1,6 @@
+Origin: hako
+Label: hako
+Codename: trixie
+Architectures: arm64 source
+Components: main
+Description: hako-os local packages

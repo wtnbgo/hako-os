@@ -1,0 +1,15 @@
+[Unit]
+Description=USB-C device mode (NCM network + ACM serial)
+After=sys-kernel-config.mount systemd-modules-load.service
+Before=network-pre.target
+Wants=network-pre.target
+ConditionPathExists=/sys/class/udc
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/rpmini/usb-gadget start
+ExecStop=/usr/lib/rpmini/usb-gadget stop
+
+[Install]
+WantedBy=multi-user.target

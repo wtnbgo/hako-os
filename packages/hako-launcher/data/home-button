@@ -1,0 +1,29 @@
+#!/bin/sh
+# HOME button of the built-in pad (run by triggerhappy as root, see
+# /etc/triggerhappy/triggers.d/hako-home.conf). Holding it for 1 second
+# tells hako-launcher (SIGUSR1) to close the running application and come
+# back to the home screen.
+#
+#   home-button press | release
+PIDFILE=/run/hako-home-button.pid
+HOLD=1
+
+cancel() {
+	[ -r "$PIDFILE" ] && kill "$(cat "$PIDFILE")" 2>/dev/null
+	rm -f "$PIDFILE"
+}
+
+case "$1" in
+press)
+	cancel
+	(sleep "$HOLD" && rm -f "$PIDFILE" && pkill -USR1 -x hako-launcher) >/dev/null 2>&1 &
+	echo $! >"$PIDFILE"
+	;;
+release)
+	cancel
+	;;
+*)
+	echo "usage: $0 press|release" >&2
+	exit 2
+	;;
+esac

@@ -1,0 +1,3 @@
+# Keep the WCD938x SoundWire RX/TX slaves out of runtime suspend: while they
+# sleep the headphone jack (MBHC) is not detected. Same fix as ROCKNIX.
+ACTION=="bind", SUBSYSTEM=="soundwire", KERNEL=="sdw:*:0217:010d:*", ATTR{power/control}="on"

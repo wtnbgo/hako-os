@@ -1,0 +1,6 @@
+[submodule "packages/hako-love/love"]
+	path = packages/hako-love/love
+	url = https://github.com/love2d/love
+[submodule "packages/hako-raylib-hello/raylib"]
+	path = packages/hako-raylib-hello/raylib
+	url = https://github.com/raysan5/raylib
