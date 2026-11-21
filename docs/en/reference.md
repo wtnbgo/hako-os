@@ -249,8 +249,9 @@ ssh root@192.168.7.2
 ```
 
 - The PC side automatically gets a 192.168.7.x address (recognized by Windows' standard driver).
-- Serial is also exposed (root autologin on ttyGS0 on the device). It should appear as a COM port on Windows,
-  but this has not been tried yet. A fallback for when networking does not work.
+- Serial is also exposed (root autologin on ttyGS0 on the device). Windows shows it with its standard driver as
+  "USB Serial Device (COMn)" (Device Manager → Ports; hardware ID `VID_1D6B&PID_0104&MI_02`).
+  Open it at 115200 bps (Tera Term, PuTTY, ...) to get a root shell. A fallback for when networking does not work.
 - To use Wi-Fi, run `iwctl station wlan0 connect <SSID>` on the device.
 
 ### Updating the device's software (everyday development)
@@ -491,7 +492,6 @@ small (neither krkrz nor Siv3D has a rotation mechanism).
   - Headset microphone (UCM Headset input) and headphone buttons.
   - Bluetooth: firmware loading, pairing (controllers and earphones), audio output.
   - HDMI (USB-C DisplayPort Alt Mode) output: video and audio (`HDMI-RP.conf`).
-  - Whether the USB serial shows up as a COM port on Windows.
 
 - A mechanism to version each app build automatically (since apt does not reinstall the same version).
 - Release image: read-only root, A/B slots, rollback based on a boot counter, an update mechanism (our own script at first, later RAUC).
