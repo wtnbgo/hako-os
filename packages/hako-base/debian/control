@@ -32,7 +32,9 @@ Depends: ${misc:Depends},
  pipewire-alsa,
  cage,
  wlr-randr,
- triggerhappy
+ triggerhappy,
+ bluez,
+ libspa-0.2-bluetooth
 Conflicts: rpmini-session
 Replaces: rpmini-session, rpmini-bsp (<< 0.2.0)
 Description: hako game session

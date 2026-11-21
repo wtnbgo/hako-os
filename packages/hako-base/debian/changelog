@@ -1,3 +1,10 @@
+hako-base (0.2.13) trixie; urgency=medium
+
+  * hako-session: really add bluez and libspa-0.2-bluetooth to Depends
+    (0.2.12 only had the changelog entry).
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 21:10:00 +0900
+
 hako-base (0.2.12) trixie; urgency=medium
 
   * hako-session: depend on bluez and libspa-0.2-bluetooth, so Bluetooth
