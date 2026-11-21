@@ -9,7 +9,8 @@
  * SIGUSR2 asks to start the app named in $XDG_RUNTIME_DIR/hako-launch
  * (see launch-app; used by development tools after deploying an app).
  * The second tab holds the system settings: volume, brightness, language,
- * time zone, system information, reboot and power off.
+ * time zone, external monitor audio, Bluetooth (its own screen, see bt.c),
+ * system information, reboot and power off.
  *
  * Drawn on a landscape 1280x960 canvas. Under the cage compositor of
  * hako-session the output is already landscape (HAKO_ROTATE=0); straight
@@ -17,8 +18,9 @@
  * the output transform in wlr-randr terms (counter-clockwise), so the canvas
  * turns by 360 - HAKO_ROTATE degrees clockwise.
  *
- * Input: D-pad / left stick / arrow keys move, A / Enter selects, B / Esc
- * goes back, L / R / Tab switch tabs, touch taps.
+ * Input (any connected gamepad, e.g. the built-in pad and a Bluetooth one):
+ * D-pad / left stick / arrow keys move, A / Enter selects, B / Esc goes back,
+ * X / Delete is the extra action of a screen, L / R / Tab switch tabs, touch taps.
  */
 #include "launcher.h"
 
@@ -59,14 +61,18 @@
 #define GRID_Y 116
 #define SET_X 140
 #define SET_W 1000
-#define SET_Y 130
-#define SET_H 88
+#define SET_Y 120
+#define SET_H 80
 #define SET_TY ((SET_H - 10) / 2 - 21) /* text offset in a row */
 #define BAR_X (SET_X + 380)
 #define BAR_W 440
 
 enum { TAB_APPS, TAB_SETTINGS, TAB_COUNT };
-enum { S_VOLUME, S_BRIGHT, S_LANGUAGE, S_TIMEZONE, S_EXTAUDIO, S_INFO, S_REBOOT, S_POWEROFF, S_COUNT };
+enum { S_VOLUME, S_BRIGHT, S_LANGUAGE, S_TIMEZONE, S_EXTAUDIO, S_BLUETOOTH, S_INFO, S_REBOOT, S_POWEROFF, S_COUNT };
+/* rows of the Bluetooth screen before the devices */
+enum { BT_ROW_POWER, BT_ROW_SCAN, BT_ROWS_FIXED };
+#define BT_VISIBLE 8
+#define BT_SCAN_MS 30000
 
 /* time zones offered in the settings (names: ja, en) */
 static const struct { const char *tz, *name[LANG_COUNT]; } TZ[] = {
@@ -91,8 +97,8 @@ static const struct { const char *tz, *name[LANG_COUNT]; } TZ[] = {
 	{ "Pacific/Auckland",    { "ニュージーランド (UTC+12)", "New Zealand (UTC+12)" } },
 };
 #define TZ_COUNT ((int)SDL_arraysize(TZ))
-enum { DLG_NONE, DLG_REBOOT, DLG_POWEROFF };
-enum { A_NONE, A_UP, A_DOWN, A_LEFT, A_RIGHT, A_OK, A_BACK, A_TAB_L, A_TAB_R };
+enum { DLG_NONE, DLG_REBOOT, DLG_POWEROFF, DLG_BT_FORGET };
+enum { A_NONE, A_UP, A_DOWN, A_LEFT, A_RIGHT, A_OK, A_BACK, A_TAB_L, A_TAB_R, A_OPT };
 
 static const float TAB_X[TAB_COUNT] = { 330, 500 };
 
@@ -138,6 +144,12 @@ typedef struct {
 	char tz[64];      /* current time zone */
 	bool ext_audio_device; /* external monitor audio stays on the device */
 	bool info;
+	bool bt_screen;       /* the Bluetooth screen is open */
+	BtState bt;
+	int bt_sel, bt_top;
+	Uint64 bt_next;       /* next refresh of the device list */
+	Uint64 scan_until;    /* searching stops then */
+	BtDevice bt_target;   /* device of the "forget" dialog */
 	char info_lines[40][160];
 	int ninfo;
 	int dialog;
@@ -145,7 +157,7 @@ typedef struct {
 	Uint64 toast_until;
 	SysState sys;
 	Uint64 sys_next;
-	SDL_Gamepad *gp;
+	SDL_Gamepad *gp[8];   /* every connected pad drives the launcher */
 	int rep_act;          /* held direction, for auto repeat */
 	Uint64 rep_next;
 	int stick_x, stick_y; /* left stick as a D-pad: -1, 0, 1 */
@@ -468,6 +480,11 @@ static void settings_activate(Launcher *l)
 	case S_EXTAUDIO:
 		set_ext_audio(l, !l->ext_audio_device);
 		break;
+	case S_BLUETOOTH:
+		l->bt_screen = true;
+		l->bt_sel = l->bt_top = 0;
+		bt_refresh(&l->bt);
+		break;
 	case S_INFO:
 		l->ninfo = sys_info(l->info_lines, SDL_arraysize(l->info_lines));
 		l->info = true;
@@ -481,11 +498,77 @@ static void settings_activate(Launcher *l)
 	}
 }
 
+/* ---------------------------------------------------------------- bluetooth */
+
+static int bt_rows(const Launcher *l)
+{
+	return BT_ROWS_FIXED + l->bt.ndev;
+}
+
+static void bt_leave(Launcher *l)
+{
+	if (l->bt.discovering || l->scan_until)
+		bt_scan(false);
+	l->scan_until = 0;
+	l->bt_screen = false;
+}
+
+static void bt_select_row(Launcher *l, int row)
+{
+	l->bt_sel = SDL_clamp(row, 0, bt_rows(l) - 1);
+	if (l->bt_sel < l->bt_top)
+		l->bt_top = l->bt_sel;
+	else if (l->bt_sel >= l->bt_top + BT_VISIBLE)
+		l->bt_top = l->bt_sel - BT_VISIBLE + 1;
+}
+
+static void bt_activate_row(Launcher *l)
+{
+	if (!l->bt.available)
+		return;
+	if (l->bt_sel == BT_ROW_POWER)
+		bt_set_powered(!l->bt.powered);
+	else if (l->bt_sel == BT_ROW_SCAN) {
+		if (!l->bt.powered)
+			bt_set_powered(true);
+		bool on = !(l->bt.discovering || l->scan_until);
+		bt_scan(on);
+		l->scan_until = on ? SDL_GetTicks() + BT_SCAN_MS : 0;
+	} else {
+		int i = l->bt_sel - BT_ROWS_FIXED;
+		if (i >= 0 && i < l->bt.ndev && l->bt.dev[i].busy == BT_IDLE)
+			bt_activate(&l->bt.dev[i]);
+	}
+	l->bt_next = 0; /* refresh now */
+}
+
+static void bt_act(Launcher *l, int a)
+{
+	switch (a) {
+	case A_UP:   bt_select_row(l, l->bt_sel - 1); break;
+	case A_DOWN: bt_select_row(l, l->bt_sel + 1); break;
+	case A_OK:   bt_activate_row(l); break;
+	case A_BACK: bt_leave(l); break;
+	case A_OPT: {
+		int i = l->bt_sel - BT_ROWS_FIXED;
+		if (i >= 0 && i < l->bt.ndev && l->bt.dev[i].paired) {
+			l->bt_target = l->bt.dev[i];
+			l->dialog = DLG_BT_FORGET;
+		}
+		break;
+	}
+	}
+}
+
 static void act(Launcher *l, Screen *s, int a)
 {
 	l->dirty = true;
 	if (l->dialog) {
-		if (a == A_OK) {
+		if (a == A_OK && l->dialog == DLG_BT_FORGET) {
+			l->dialog = DLG_NONE;
+			bt_forget(&l->bt_target);
+			l->bt_next = 0;
+		} else if (a == A_OK) {
 			bool reboot = l->dialog == DLG_REBOOT;
 			l->dialog = DLG_NONE;
 			if (!sys_power(reboot))
@@ -493,6 +576,14 @@ static void act(Launcher *l, Screen *s, int a)
 		} else if (a == A_BACK)
 			l->dialog = DLG_NONE;
 		return;
+	}
+	if (l->bt_screen) {
+		if (a == A_TAB_L || a == A_TAB_R)
+			bt_leave(l);
+		else {
+			bt_act(l, a);
+			return;
+		}
 	}
 	if (l->info) {
 		if (a == A_BACK || a == A_OK)
@@ -540,6 +631,7 @@ static bool hit(float x, float y, float rx, float ry, float rw, float rh)
 #define DLG_BTN_Y 520
 #define DLG_BTN_W 240
 #define DLG_BTN_H 80
+#define BT_LIST_Y (HEADER_H + 90)
 
 static void tap(Launcher *l, Screen *s, float x, float y)
 {
@@ -553,6 +645,19 @@ static void tap(Launcher *l, Screen *s, float x, float y)
 	}
 	if (l->info) {
 		l->info = false;
+		return;
+	}
+	if (l->bt_screen) {
+		if (y < HEADER_H) {
+			bt_leave(l);
+			return;
+		}
+		for (int r = 0; r < BT_VISIBLE && l->bt_top + r < bt_rows(l); r++)
+			if (hit(x, y, SET_X, BT_LIST_Y + r * SET_H, SET_W, SET_H - 10)) {
+				bt_select_row(l, l->bt_top + r);
+				bt_activate_row(l);
+				return;
+			}
 		return;
 	}
 	for (int t = 0; t < TAB_COUNT; t++)
@@ -605,7 +710,7 @@ static void draw_header(Launcher *l)
 	ui_fill(&ui, 0, 0, CW, HEADER_H, C_BAR);
 	ui_text(&ui, ui.title, 40, 16, C_ACCENT, ALIGN_LEFT, 0, "hako");
 	for (int t = 0; t < TAB_COUNT; t++) {
-		bool on = l->tab == t && !l->info;
+		bool on = l->tab == t && !l->info && !l->bt_screen;
 		float w = ui_text(&ui, ui.big, TAB_X[t], 20, on ? C_TEXT : C_DIM, ALIGN_LEFT, 0, "%s",
 		                  T(t == TAB_APPS ? T_TAB_APPS : T_TAB_SETTINGS));
 		if (on)
@@ -693,7 +798,7 @@ static void slider(float y, float v, const char *value)
 static void draw_settings(Launcher *l)
 {
 	static const TextId name[S_COUNT] = { T_S_VOLUME, T_S_BRIGHT, T_S_LANGUAGE, T_S_TIMEZONE,
-	                                      T_S_EXTAUDIO, T_S_INFO, T_S_REBOOT, T_S_POWEROFF };
+	                                      T_S_EXTAUDIO, T_S_BLUETOOTH, T_S_INFO, T_S_REBOOT, T_S_POWEROFF };
 	for (int i = 0; i < S_COUNT; i++) {
 		float y = SET_Y + i * SET_H;
 		bool sel = i == l->sel_set;
@@ -726,10 +831,65 @@ static void draw_settings(Launcher *l)
 		} else if (i == S_EXTAUDIO)
 			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_TEXT, ALIGN_RIGHT, 0, "‹  %s  ›",
 			        T(l->ext_audio_device ? T_EXT_DEVICE : T_EXT_MONITOR));
+		else if (i == S_BLUETOOTH)
+			ui_text(&ui, ui.mid, SET_X + SET_W - 40, y + SET_TY, C_DIM, ALIGN_RIGHT, 0, "%s   ›",
+			        !l->bt.available ? "" : T(l->bt.powered ? T_BT_ON : T_BT_OFF));
 		else
 			ui_text(&ui, ui.mid, SET_X + SET_W - 40, y + SET_TY, C_DIM, ALIGN_RIGHT, 0, "›");
 	}
 	ui_text(&ui, ui.small, SET_X, SET_Y + S_COUNT * SET_H + 10, C_DIM, ALIGN_LEFT, 0, "%s", T(T_VOLUME_NOTE));
+}
+
+static const char *bt_state_text(const BtDevice *d)
+{
+	switch (d->busy) {
+	case BT_PAIRING:       return T(T_BT_STATE_PAIRING);
+	case BT_CONNECTING:    return T(T_BT_STATE_CONNECTING);
+	case BT_DISCONNECTING: return T(T_BT_STATE_DISCONNECTING);
+	default: break;
+	}
+	return T(d->connected ? T_BT_STATE_CONNECTED : d->paired ? T_BT_STATE_PAIRED : T_BT_STATE_NEW);
+}
+
+static void draw_bt(Launcher *l)
+{
+	ui_text(&ui, ui.big, SET_X, HEADER_H + 22, C_TEXT, ALIGN_LEFT, 0, "%s", T(T_S_BLUETOOTH));
+	if (!l->bt.available) {
+		ui_text(&ui, ui.mid, SET_X, BT_LIST_Y + 20, C_DIM, ALIGN_LEFT, 0, "%s", T(T_BT_UNAVAILABLE));
+		return;
+	}
+	bool scanning = l->bt.discovering || l->scan_until;
+	for (int r = 0; r < BT_VISIBLE && l->bt_top + r < bt_rows(l); r++) {
+		int row = l->bt_top + r;
+		float y = BT_LIST_Y + r * SET_H;
+		bool sel = row == l->bt_sel;
+		ui_fill(&ui, SET_X, y, SET_W, SET_H - 10, sel ? C_TILE_SEL : C_TILE);
+		if (sel)
+			ui_fill(&ui, SET_X, y, 8, SET_H - 10, C_ACCENT);
+		if (row == BT_ROW_POWER) {
+			ui_text(&ui, ui.mid, SET_X + 40, y + SET_TY, C_TEXT, ALIGN_LEFT, 0, "%s", T(T_S_BLUETOOTH));
+			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, l->bt.powered ? C_ACCENT : C_DIM, ALIGN_RIGHT, 0,
+			        "%s", T(l->bt.powered ? T_BT_ON : T_BT_OFF));
+		} else if (row == BT_ROW_SCAN) {
+			ui_text(&ui, ui.mid, SET_X + 40, y + SET_TY, C_TEXT, ALIGN_LEFT, 0, "%s", T(T_BT_SCAN));
+			if (scanning)
+				ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_ACCENT, ALIGN_RIGHT, 0, "%s", T(T_BT_SCANNING));
+		} else {
+			const BtDevice *d = &l->bt.dev[row - BT_ROWS_FIXED];
+			float w = ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, d->connected ? C_ACCENT : C_DIM,
+			                  ALIGN_RIGHT, 0, "%s", bt_state_text(d));
+			ui_text(&ui, ui.mid, SET_X + 40, y + SET_TY, C_TEXT, ALIGN_LEFT, SET_W - w - 110, "%s", d->name);
+		}
+	}
+	int rows = bt_rows(l);
+	float note_y = BT_LIST_Y + SDL_min(rows - l->bt_top, BT_VISIBLE) * SET_H + 6;
+	if (l->bt.ndev == 0)
+		ui_text(&ui, ui.small, SET_X, note_y, C_DIM, ALIGN_LEFT, 0, "%s  %s", T(T_BT_NONE), T(T_BT_PAIRING_HINT));
+	else if (rows > BT_VISIBLE)
+		ui_text(&ui, ui.small, SET_X + SET_W, HEADER_H + 34, C_DIM, ALIGN_RIGHT, 0, "%s%s",
+		        l->bt_top > 0 ? "▲ " : "", l->bt_top + BT_VISIBLE < rows ? "▼" : "");
+	else
+		ui_text(&ui, ui.small, SET_X, note_y, C_DIM, ALIGN_LEFT, 0, "%s", T(T_BT_PAIRING_HINT));
 }
 
 static void draw_info(Launcher *l)
@@ -749,8 +909,11 @@ static void draw_dialog(Launcher *l)
 	SDL_SetRenderDrawBlendMode(ui.ren, SDL_BLENDMODE_NONE);
 	ui_fill(&ui, CW / 2 - 340, 300, 680, 340, C_BAR);
 	ui_frame(&ui, CW / 2 - 340, 300, 680, 340, 3, C_ACCENT);
-	ui_text(&ui, ui.big, CW / 2, 380, C_TEXT, ALIGN_CENTER, 0, "%s",
-	        T(l->dialog == DLG_REBOOT ? T_ASK_REBOOT : T_ASK_POWEROFF));
+	if (l->dialog == DLG_BT_FORGET)
+		ui_text(&ui, ui.big, CW / 2, 380, C_TEXT, ALIGN_CENTER, 600, T(T_ASK_BT_FORGET), l->bt_target.name);
+	else
+		ui_text(&ui, ui.big, CW / 2, 380, C_TEXT, ALIGN_CENTER, 0, "%s",
+		        T(l->dialog == DLG_REBOOT ? T_ASK_REBOOT : T_ASK_POWEROFF));
 	ui_fill(&ui, DLG_YES_X, DLG_BTN_Y, DLG_BTN_W, DLG_BTN_H, C_TILE_SEL);
 	ui_fill(&ui, DLG_NO_X, DLG_BTN_Y, DLG_BTN_W, DLG_BTN_H, C_TILE);
 	ui_text(&ui, ui.mid, DLG_YES_X + DLG_BTN_W / 2, DLG_BTN_Y + 20, C_TEXT, ALIGN_CENTER, 0, "A  %s", T(T_YES));
@@ -764,6 +927,8 @@ static void draw(Launcher *l, Screen *s)
 	draw_header(l);
 	if (l->info)
 		draw_info(l);
+	else if (l->bt_screen)
+		draw_bt(l);
 	else if (l->tab == TAB_APPS)
 		draw_apps(l);
 	else
@@ -776,7 +941,13 @@ static void draw(Launcher *l, Screen *s)
 		hint(&x, "B", T(T_NO));
 	} else if (l->info)
 		hint(&x, "B", T(T_BACK));
-	else {
+	else if (l->bt_screen) {
+		hint(&x, "A", T(l->bt_sel >= BT_ROWS_FIXED ? T_BT_CONNECT_OR_PAIR : T_SELECT));
+		int i = l->bt_sel - BT_ROWS_FIXED;
+		if (i >= 0 && i < l->bt.ndev && l->bt.dev[i].paired)
+			hint(&x, "X", T(T_BT_FORGET));
+		hint(&x, "B", T(T_BACK));
+	} else {
 		hint(&x, "A", T(l->tab == TAB_APPS ? T_LAUNCH : T_SELECT));
 		if (l->tab == TAB_SETTINGS)
 			hint(&x, "←→", T(T_ADJUST));
@@ -817,6 +988,7 @@ static int gamepad_action(SDL_Gamepad *gp, SDL_GamepadButton b)
 	switch (SDL_GetGamepadButtonLabel(gp, b)) {
 	case SDL_GAMEPAD_BUTTON_LABEL_A: return A_OK;
 	case SDL_GAMEPAD_BUTTON_LABEL_B: return A_BACK;
+	case SDL_GAMEPAD_BUTTON_LABEL_X: return A_OPT;
 	case SDL_GAMEPAD_BUTTON_LABEL_UNKNOWN:
 		return b == SDL_GAMEPAD_BUTTON_SOUTH ? A_OK : b == SDL_GAMEPAD_BUTTON_EAST ? A_BACK : A_NONE;
 	default: return A_NONE;
@@ -837,6 +1009,8 @@ static int key_action(SDL_Keycode k)
 	case SDLK_TAB:
 	case SDLK_E:         return A_TAB_R;
 	case SDLK_Q:         return A_TAB_L;
+	case SDLK_X:
+	case SDLK_DELETE:    return A_OPT;
 	default:             return A_NONE;
 	}
 }
@@ -879,23 +1053,33 @@ static void handle(Launcher *l, Screen *s, const SDL_Event *e)
 		g_term = 1;
 		break;
 	case SDL_EVENT_GAMEPAD_ADDED:
-		if (!l->gp)
-			l->gp = SDL_OpenGamepad(e->gdevice.which);
+		for (int i = 0; i < (int)SDL_arraysize(l->gp); i++)
+			if (!l->gp[i]) {
+				l->gp[i] = SDL_OpenGamepad(e->gdevice.which);
+				SDL_Log("gamepad: %s", l->gp[i] ? SDL_GetGamepadName(l->gp[i]) : SDL_GetError());
+				break;
+			}
 		break;
 	case SDL_EVENT_GAMEPAD_REMOVED:
-		if (l->gp && SDL_GetGamepadID(l->gp) == e->gdevice.which) {
-			SDL_CloseGamepad(l->gp);
-			l->gp = NULL;
-		}
+		for (int i = 0; i < (int)SDL_arraysize(l->gp); i++)
+			if (l->gp[i] && SDL_GetGamepadID(l->gp[i]) == e->gdevice.which) {
+				SDL_CloseGamepad(l->gp[i]);
+				l->gp[i] = NULL;
+			}
 		break;
 	case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-		if (l->gp)
-			press(l, s, gamepad_action(l->gp, (SDL_GamepadButton)e->gbutton.button));
+	case SDL_EVENT_GAMEPAD_BUTTON_UP: {
+		/* the labels (A/B/X) come from the pad that sent the event */
+		SDL_Gamepad *gp = SDL_GetGamepadFromID(e->gbutton.which);
+		if (!gp)
+			break;
+		int a = gamepad_action(gp, (SDL_GamepadButton)e->gbutton.button);
+		if (e->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)
+			press(l, s, a);
+		else
+			release(l, a);
 		break;
-	case SDL_EVENT_GAMEPAD_BUTTON_UP:
-		if (l->gp)
-			release(l, gamepad_action(l->gp, (SDL_GamepadButton)e->gbutton.button));
-		break;
+	}
 	case SDL_EVENT_GAMEPAD_AXIS_MOTION:
 		if (e->gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX)
 			stick(l, s, &l->stick_x, e->gaxis.value, A_LEFT, A_RIGHT);
@@ -973,6 +1157,7 @@ int main(int argc, char **argv)
 	sys_timezone(l.tz, sizeof l.tz);
 	sys_apply_timezone(l.tz);
 	ext_audio_load(&l);
+	bt_open();
 	Screen s;
 	if (!screen_open(&s, rot))
 		return 1;
@@ -1010,6 +1195,8 @@ int main(int argc, char **argv)
 					l.sel_app = idx;
 					l.dialog = DLG_NONE;
 					l.info = false;
+					if (l.bt_screen)
+						bt_leave(&l);
 					run_app(&l, &s, idx);
 				} else {
 					SDL_Log("launch request: no app '%s'", id);
@@ -1026,8 +1213,28 @@ int main(int argc, char **argv)
 		}
 		if (now >= l.sys_next) {
 			sys_refresh(&l.sys);
+			if (!l.bt_screen && l.tab == TAB_SETTINGS)
+				bt_refresh(&l.bt);  /* on / off in the settings list */
 			l.sys_next = now + 2000;
 			l.dirty = true;
+		}
+		/* Bluetooth: agent requests, results and changes */
+		if (bt_poll())
+			l.bt_next = 0;
+		char msg[256];
+		if (bt_take_message(msg, sizeof msg))
+			toast(&l, "%s", msg);
+		if (l.bt_screen) {
+			if (l.scan_until && now >= l.scan_until) {
+				bt_scan(false);
+				l.scan_until = 0;
+			}
+			if (now >= l.bt_next) {
+				bt_refresh(&l.bt);
+				bt_select_row(&l, l.bt_sel);
+				l.bt_next = now + 1000;
+				l.dirty = true;
+			}
 		}
 		Uint64 minute = (Uint64)time(NULL) / 60; /* the clock in the header */
 		if (minute != last_minute || (l.toast_until && now >= l.toast_until)) {
@@ -1043,10 +1250,12 @@ int main(int argc, char **argv)
 	}
 
 	SDL_Log("exit");
+	bt_close();
 	icons_free(&l);
 	sound_close();
-	if (l.gp)
-		SDL_CloseGamepad(l.gp);
+	for (int i = 0; i < (int)SDL_arraysize(l.gp); i++)
+		if (l.gp[i])
+			SDL_CloseGamepad(l.gp[i]);
 	screen_close(&s);
 	ui_fonts_close(&ui);
 	SDL_Quit();

@@ -1,10 +1,10 @@
 PKG_CONFIG ?= pkg-config
 CFLAGS ?= -O2 -g
-CFLAGS += -Wall -Wextra -Wno-format-truncation $(shell $(PKG_CONFIG) --cflags sdl3 sdl3-ttf sdl3-image)
-LDLIBS += $(shell $(PKG_CONFIG) --libs sdl3 sdl3-ttf sdl3-image) -lm
+CFLAGS += -Wall -Wextra -Wno-format-truncation $(shell $(PKG_CONFIG) --cflags sdl3 sdl3-ttf sdl3-image libsystemd)
+LDLIBS += $(shell $(PKG_CONFIG) --libs sdl3 sdl3-ttf sdl3-image libsystemd) -lm
 PREFIX ?= /usr
 
-SRC = src/main.c src/apps.c src/i18n.c src/sys.c src/ui.c
+SRC = src/main.c src/apps.c src/i18n.c src/sys.c src/ui.c src/bt.c
 
 all: hako-launcher
 

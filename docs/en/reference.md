@@ -156,7 +156,7 @@ The old names (rpmini-session / rpmini-dev / rpmini-launcher / rpmini-sdl-hello)
   When the app exits, it returns to the list (an error exit or crash shows a message).
 - **Long-press the HOME button (1 second)** to terminate the running app and return. triggerhappy (`/etc/triggerhappy/triggers.d/hako-home.conf`)
   calls `/usr/lib/hako/home-button`, which sends SIGUSR1 to the launcher. The launcher sends SIGTERM to the app's process group, then SIGKILL after 3 seconds.
-- Settings tab: volume (a test sound plays when changed), screen brightness (logind's `SetBrightness`), language, time zone (systemd-timedated), external monitor audio (`~/.config/hako/external-audio`, applied by `/usr/lib/hako/audio-route`),
+- Settings tab: volume (a test sound plays when changed), screen brightness (logind's `SetBrightness`), language, time zone (systemd-timedated), external monitor audio (`~/.config/hako/external-audio`, applied by `/usr/lib/hako/audio-route`), Bluetooth (its own screen: on/off, search, pair and connect, disconnect, X to forget; talks to BlueZ over D-Bus and has its own pairing agent),
   system info, reboot, power off (power and time zone are allowed for user `hako` via the polkit rule `50-hako-launcher.rules`).
   The time zone is passed to started apps via `TZ`.
 - Starting from outside: `/usr/lib/hako/launch-app <id>` (run as root) makes the launcher start a registered app.
@@ -236,7 +236,7 @@ The app appears about 6.5 seconds after power-on (kernel 2.1 s + userspace 1.8 s
 | External monitor (USB-C DisplayPort Alt Mode) | Works | Plugged in while running, the screen moves to the monitor (cage `-m last`, `HAKO_CAGE_MODE`). The built-in panel goes dark; 4:3 apps are scaled to the centre, raylib and similar use the whole 16:9. The monitor's touch (USB) and the built-in touch both map to the whole monitor. Sound moves to the monitor too (the launcher setting "External monitor audio" can keep it on the device). The DSP does not answer the first start of DP audio, so a moment of silence is played right after the switch (`/usr/lib/hako/hw/display-audio-prime`). (The earlier stall when the session stopped after unplugging the monitor came from the terminal reset of the USB serial getty; fixed in hako-dev 0.2.11) |
 | Headset microphone (4-pole headphone jack) | Works | Plugging in sets `Headphone Jack` / `Mic Jack` and the input switches to "Headphone Microphone" (UCM Headset, ADC2, `hw:0,2`). Records at 48 kHz; normal speech averages about -20 dBFS. The built-in microphone is not supported (next row) |
 | Built-in microphone (hole at the top left) | Not supported | Android (`mixer_paths_qrd.xml`) uses `codec_dmic3` (WCD938x DMIC3 → `SWR_DMIC2` → TX DEC0). In our device tree the WCD938x DMICs have no DAPM input path, so recording fails with an I/O error. Adding the path with `widgets` and `audio-routing` makes data flow, but none of DMIC1-8 carried sound. Android also configures LPASS DMIC pins (`dmic01`, `dmic45`); the mic may be wired there |
-| Bluetooth | Works (gamepads, headphones) | QCA6390 (`hci0`), BlueZ 5.82 (a dependency since hako-session 0.2.13). A Switch Pro Controller pairs and works with the printed labels through the kernel's `hid-nintendo`. A new Xbox controller (nano, `045e:0b4f`) pairs, but its input notifications cannot be enabled, so it does not work. Headphones (Beats Solo 4) appear as a PipeWire output when connected, become the default output, and play over A2DP (SBC). There is no pairing screen yet (steps below) |
+| Bluetooth | Works (gamepads, headphones) | QCA6390 (`hci0`), BlueZ 5.82 (a dependency since hako-session 0.2.13). A Switch Pro Controller pairs and works with the printed labels through the kernel's `hid-nintendo`. A new Xbox controller (nano, `045e:0b4f`) pairs, but its input notifications cannot be enabled, so it does not work. Headphones (Beats Solo 4) appear as a PipeWire output when connected, become the default output, and play over A2DP (SBC). Pairing is done in the launcher under Settings → Bluetooth (from ssh: steps below) |
 
 ## 5. Common operations
 
@@ -255,7 +255,7 @@ ssh root@192.168.7.2
 - Serial is also exposed (root autologin on ttyGS0 on the device). Windows shows it with its standard driver as
   "USB Serial Device (COMn)" (Device Manager → Ports; hardware ID `VID_1D6B&PID_0104&MI_02`).
   Open it at 115200 bps (Tera Term, PuTTY, ...) to get a root shell. A fallback for when networking does not work.
-- Pairing a Bluetooth device (from ssh for now; put the device into pairing mode first):
+- Pairing a Bluetooth device from ssh (put the device into pairing mode first):
   ```sh
   bluetoothctl --timeout 10 scan on              # find the device
   bluetoothctl devices                           # look up its address by name

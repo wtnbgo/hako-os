@@ -20,8 +20,12 @@ typedef enum {
 	T_START_FAILED, T_CLOSED, T_EXIT_ERROR, T_CRASHED, T_REBOOT_FAILED, T_POWER_FAILED,
 	T_BATTERY, T_CHARGING, T_VOLUME_HDR, T_MUTED,
 	T_NO_APPS, T_NO_APPS_HINT, T_DEV,
-	T_S_VOLUME, T_S_BRIGHT, T_S_LANGUAGE, T_S_TIMEZONE, T_S_EXTAUDIO, T_S_INFO, T_S_REBOOT, T_S_POWEROFF,
+	T_S_VOLUME, T_S_BRIGHT, T_S_LANGUAGE, T_S_TIMEZONE, T_S_EXTAUDIO, T_S_BLUETOOTH, T_S_INFO, T_S_REBOOT, T_S_POWEROFF,
 	T_EXT_MONITOR, T_EXT_DEVICE,
+	T_BT_ON, T_BT_OFF, T_BT_SCAN, T_BT_SCANNING, T_BT_PAIRING_HINT, T_BT_STATE_CONNECTED, T_BT_STATE_PAIRED,
+	T_BT_STATE_NEW, T_BT_STATE_PAIRING, T_BT_STATE_CONNECTING, T_BT_STATE_DISCONNECTING, T_BT_UNAVAILABLE,
+	T_BT_NONE, T_BT_FORGET, T_ASK_BT_FORGET, T_BT_FAILED, T_BT_CONNECTED_MSG, T_BT_DISCONNECTED_MSG,
+	T_BT_FORGOTTEN_MSG, T_BT_CONNECT_OR_PAIR,
 	T_NO_SUCH_APP, T_TZ_FAILED, T_TIMEZONE_INFO,
 	T_UNAVAILABLE, T_NOT_ADJUSTABLE, T_VOLUME_NOTE,
 	T_ASK_REBOOT, T_ASK_POWEROFF, T_YES, T_NO, T_BACK,
@@ -107,3 +111,38 @@ bool sys_power(bool reboot);
 void sys_timezone(char *buf, size_t n);      /* e.g. Asia/Tokyo */
 bool sys_set_timezone(const char *tz);
 void sys_apply_timezone(const char *tz);     /* TZ for us and the apps */
+
+/* ---- bt.c: Bluetooth (BlueZ over D-Bus) ---- */
+
+#define BT_MAX_DEVICES 32
+#define BT_PATH_MAX 96
+#define BT_NAME_MAX 64
+
+typedef enum { BT_IDLE, BT_PAIRING, BT_CONNECTING, BT_DISCONNECTING } BtBusy;
+
+typedef struct {
+	char path[BT_PATH_MAX];
+	char addr[18];
+	char name[BT_NAME_MAX];
+	char icon[32];           /* input-gaming, audio-headphones, ... */
+	bool has_name, paired, connected, trusted, has_rssi;
+	int rssi;
+	BtBusy busy;
+} BtDevice;
+
+typedef struct {
+	bool available;          /* BlueZ and the adapter are there */
+	bool powered, discovering;
+	BtDevice dev[BT_MAX_DEVICES];  /* connected, paired, then found (nearest first) */
+	int ndev;
+} BtState;
+
+bool bt_open(void);          /* connect to the bus and register the pairing agent */
+void bt_close(void);
+bool bt_poll(void);          /* run pending D-Bus work; true when something changed */
+bool bt_refresh(BtState *st);
+void bt_set_powered(bool on);
+void bt_scan(bool on);
+void bt_activate(const BtDevice *d);  /* pair+trust+connect, connect or disconnect */
+void bt_forget(const BtDevice *d);
+bool bt_take_message(char *buf, size_t n);  /* result of an operation, for a toast */

@@ -1,3 +1,15 @@
+hako-launcher (0.3.0) trixie; urgency=medium
+
+  * Settings: Bluetooth screen. Switch the adapter on and off, search for
+    devices, pair (+ trust) and connect a new device, connect / disconnect a
+    paired one, and forget it (X). Talks to BlueZ over D-Bus (sd-bus) and
+    registers a NoInputNoOutput agent for pairing game pads and headphones.
+  * Settings rows are a little lower again to fit the new item.
+  * Every connected gamepad drives the launcher (the built-in pad and, say, a
+    Bluetooth one), not only the first one found.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 22:00:00 +0900
+
 hako-launcher (0.2.3) trixie; urgency=medium
 
   * Settings: "External monitor audio" (from the monitor / from the device),
