@@ -233,7 +233,8 @@ The app appears about 6.5 seconds after power-on (kernel 2.1 s + userspace 1.8 s
 | Wi-Fi | OK | QCA6390 (ath11k). Connected with iwd |
 | DSP | OK | adsp / cdsp / slpi start up |
 | Touch panel | OK | `generic ft5x06`. Available as SDL3 finger events (coordinates are relative to the panel's native portrait orientation; conversion for a 90-degree landscape rotation verified with `hako-sdl-hello`) |
-| Bluetooth, HDMI output, headset microphone | Unverified | |
+| External monitor (USB-C DisplayPort Alt Mode) | Partly works | Plugged in while running, it is detected as DP-1 and driven at 1920x1080. But cage places outputs side by side (`-m extend`), so the external one only shows a black background. Restarting the session with the monitor attached hits a clock warning while disabling the DP CRTC, and the display stack stalls until the monitor is unplugged. Audio not verified |
+| Bluetooth, headset microphone | Unverified | |
 
 ## 5. Common operations
 
@@ -491,7 +492,7 @@ small (neither krkrz nor Siv3D has a rotation mechanism).
 - Investigating features (items marked "Unverified" in the table in chapter 4)
   - Headset microphone (UCM Headset input) and headphone buttons.
   - Bluetooth: firmware loading, pairing (controllers and earphones), audio output.
-  - HDMI (USB-C DisplayPort Alt Mode) output: video and audio (`HDMI-RP.conf`).
+  - External monitor (USB-C DisplayPort Alt Mode): showing the app on the external output (cage `-m last` or similar), the stall when restarting with the monitor attached (`clk-rcg2` warning, kernel side), and audio (`HDMI-RP.conf`).
 
 - A mechanism to version each app build automatically (since apt does not reinstall the same version).
 - Release image: read-only root, A/B slots, rollback based on a boot counter, an update mechanism (our own script at first, later RAUC).
