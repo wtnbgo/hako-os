@@ -12,6 +12,10 @@ SDL_VIDEO_DRIVER=kmsdrm
 # by itself (apps get HAKO_ROTATE).
 HAKO_COMPOSITOR=cage
 #HAKO_ROTATE=0
+# With cage: what an external monitor (USB-C DisplayPort) does when plugged in.
+#   last   (default) it takes over the screen, the built-in panel goes dark
+#   extend outputs side by side (the app stays on the built-in panel)
+#HAKO_CAGE_MODE=last
 
 # Siv3D (SDL3 build): start in full screen, the scene is scaled to the screen.
 # krkrz: pass the game's own option, e.g. -fullscreen=yes in the .app Args.

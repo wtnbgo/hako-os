@@ -233,7 +233,7 @@ The app appears about 6.5 seconds after power-on (kernel 2.1 s + userspace 1.8 s
 | Wi-Fi | OK | QCA6390 (ath11k). Connected with iwd |
 | DSP | OK | adsp / cdsp / slpi start up |
 | Touch panel | OK | `generic ft5x06`. Available as SDL3 finger events (coordinates are relative to the panel's native portrait orientation; conversion for a 90-degree landscape rotation verified with `hako-sdl-hello`) |
-| External monitor (USB-C DisplayPort Alt Mode) | Partly works | Plugged in while running, it is detected as DP-1 and driven at 1920x1080. But cage places outputs side by side (`-m extend`), so the external one only shows a black background. Restarting the session with the monitor attached hits a clock warning while disabling the DP CRTC, and the display stack stalls until the monitor is unplugged. Audio not verified |
+| External monitor (USB-C DisplayPort Alt Mode) | Video works, audio does not | Plugged in while running, the screen moves to the monitor (cage `-m last`, `HAKO_CAGE_MODE`). The built-in panel goes dark; 4:3 apps are scaled to the centre, raylib and similar use the whole 16:9. The monitor's touch (USB) and the built-in touch both map to the whole monitor. Audio fails because the DSP cannot start the DP port (`AFE enable for port 0x6020 failed -110`). Restarting the session with the monitor attached can stall the display stack until the monitor is unplugged |
 | Bluetooth, headset microphone | Unverified | |
 
 ## 5. Common operations
@@ -492,7 +492,7 @@ small (neither krkrz nor Siv3D has a rotation mechanism).
 - Investigating features (items marked "Unverified" in the table in chapter 4)
   - Headset microphone (UCM Headset input) and headphone buttons.
   - Bluetooth: firmware loading, pairing (controllers and earphones), audio output.
-  - External monitor (USB-C DisplayPort Alt Mode): showing the app on the external output (cage `-m last` or similar), the stall when restarting with the monitor attached (`clk-rcg2` warning, kernel side), and audio (`HDMI-RP.conf`).
+  - External monitor (USB-C DisplayPort Alt Mode): audio (the DSP cannot start the DP port; when plugged in after boot, PipeWire does not offer the HDMI profile either), and the stall when restarting with the monitor attached (kernel side).
 
 - A mechanism to version each app build automatically (since apt does not reinstall the same version).
 - Release image: read-only root, A/B slots, rollback based on a boot counter, an update mechanism (our own script at first, later RAUC).

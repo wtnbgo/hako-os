@@ -1,3 +1,12 @@
+hako-base (0.2.6) trixie; urgency=medium
+
+  * hako-session: cage runs with -m last by default (HAKO_CAGE_MODE): an external
+  *   monitor takes over the screen instead of showing an empty black area.
+  * session-app: rotate the built-in panel by name (first DSI output or
+  *   HAKO_PANEL_OUTPUT), not whichever output wlr-randr lists first.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 17:00:00 +0900
+
 hako-base (0.2.5) trixie; urgency=medium
 
   * hako-dev: description no longer mentions the PC package repository

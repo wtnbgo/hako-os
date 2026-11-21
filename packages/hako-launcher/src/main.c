@@ -127,6 +127,8 @@ typedef struct {
 	SDL_FRect dst;
 } Screen;
 
+static void screen_fit(Screen *s);
+
 typedef struct {
 	App apps[MAX_APPS];
 	SDL_Texture *icon[MAX_APPS];
@@ -208,16 +210,12 @@ static bool screen_open(Screen *s, int rot)
 	}
 	SDL_SetRenderVSync(s->ren, 1);
 	SDL_HideCursor();
-	SDL_GetRenderOutputSize(s->ren, &s->ow, &s->oh);
 	s->canvas = SDL_CreateTexture(s->ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, CW, CH);
 	if (!s->canvas) {
 		SDL_Log("canvas: %s", SDL_GetError());
 		return false;
 	}
-	bool sideways = rot == 90 || rot == 270;
-	float cw = sideways ? CH : CW, ch = sideways ? CW : CH;
-	s->fit = SDL_min(s->ow / cw, s->oh / ch);
-	s->dst = (SDL_FRect){ (s->ow - CW * s->fit) / 2, (s->oh - CH * s->fit) / 2, CW * s->fit, CH * s->fit };
+	screen_fit(s);
 	SDL_Log("video=%s renderer=%s output=%dx%d rotate=%d", SDL_GetCurrentVideoDriver(),
 	        SDL_GetRendererName(s->ren), s->ow, s->oh, rot);
 	return ui_attach(&ui, s->ren);
@@ -237,6 +235,17 @@ static void screen_close(Screen *s)
 }
 
 /* normalised window coordinates -> canvas */
+/* Fit the (rotated) canvas into the output. Called again when the output
+ * changes size, e.g. when an external monitor takes over (cage -m last). */
+static void screen_fit(Screen *s)
+{
+	SDL_GetRenderOutputSize(s->ren, &s->ow, &s->oh);
+	bool sideways = s->rot == 90 || s->rot == 270;
+	float cw = sideways ? CH : CW, ch = sideways ? CW : CH;
+	s->fit = SDL_min(s->ow / cw, s->oh / ch);
+	s->dst = (SDL_FRect){ (s->ow - CW * s->fit) / 2, (s->oh - CH * s->fit) / 2, CW * s->fit, CH * s->fit };
+}
+
 static void to_canvas(const Screen *s, float nx, float ny, float *cx, float *cy)
 {
 	float sx = nx * s->ow - (s->dst.x + s->dst.w / 2);
@@ -865,8 +874,12 @@ static void handle(Launcher *l, Screen *s, const SDL_Event *e)
 				tap(l, s, x, y);
 		}
 		break;
-	case SDL_EVENT_WINDOW_EXPOSED:
 	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+		screen_fit(s);
+		SDL_Log("output=%dx%d", s->ow, s->oh);
+		l->dirty = true;
+		break;
+	case SDL_EVENT_WINDOW_EXPOSED:
 		l->dirty = true;
 		break;
 	}

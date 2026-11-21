@@ -1,3 +1,9 @@
+hako-sdl-hello (0.2.2) trixie; urgency=medium
+
+  * Refit the canvas when the output changes size (external monitor taking over).
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 17:00:00 +0900
+
 hako-sdl-hello (0.2.1) trixie; urgency=medium
 
   * Face buttons: draw them by printed letter when

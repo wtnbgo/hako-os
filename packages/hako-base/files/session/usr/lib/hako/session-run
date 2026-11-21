@@ -52,8 +52,10 @@ echo "hako-session: starting $APP $HAKO_APP_ARGS (in $PWD)" >&2
 # panels) and the app runs as a Wayland client
 if [ "${HAKO_COMPOSITOR:-}" = cage ]; then
 	export HAKO_ROTATE="${HAKO_ROTATE:-0}"
+	# last: an external monitor, when plugged in, takes over the screen
+	# (the built-in panel goes dark); extend: outputs side by side
 	# shellcheck disable=SC2086
-	exec cage -d -- /usr/lib/hako/session-app "$APP" $HAKO_APP_ARGS
+	exec cage -d -m "${HAKO_CAGE_MODE:-last}" -- /usr/lib/hako/session-app "$APP" $HAKO_APP_ARGS
 fi
 
 # HAKO_APP_ARGS is split on purpose

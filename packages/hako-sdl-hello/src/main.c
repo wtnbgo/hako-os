@@ -265,6 +265,14 @@ int main(int argc, char **argv)
 					gp = NULL;
 				}
 				break;
+			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+				/* the output changed (external monitor taking over): refit */
+				SDL_GetRenderOutputSize(ren, &ow, &oh);
+				fit = SDL_min(ow / cw, oh / chh);
+				dst = (SDL_FRect){ (ow - CW * fit) / 2, (oh - CH * fit) / 2, CW * fit, CH * fit };
+				printf("output=%dx%d\n", ow, oh);
+				fflush(stdout);
+				break;
 			case SDL_EVENT_FINGER_DOWN:
 			case SDL_EVENT_FINGER_MOTION:
 			case SDL_EVENT_FINGER_UP: {

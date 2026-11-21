@@ -1,9 +1,10 @@
-# Touch panel rotation for the cage session (rpmini-session).
+# Touch panel rotation for the cage session (hako-session).
 # cage (wlroots) maps touch to the whole layout without the output transform,
-# so libinput rotates the touch coordinates instead. Must match RPMINI_ROTATE
-# in /etc/default/rpmini-session:
+# so libinput rotates the touch coordinates instead. Must match HAKO_ROTATE
+# (/usr/lib/hako/session.d/10-rpmini.sh):
 #   270: "0 1 0 -1 0 1"   (standard)
 #    90: "0 -1 1 1 0 0"
 #   180: "-1 0 1 0 -1 1"
 # Only libinput users (the compositor) read this; SDL on KMS/DRM reads evdev directly.
-ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_TOUCHSCREEN}=="1", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"
+# Only the built-in panel (I2C); USB touch monitors keep their own orientation.
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_TOUCHSCREEN}=="1", ENV{ID_PATH}=="platform-a94000.i2c", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"
