@@ -233,7 +233,7 @@ The app appears about 6.5 seconds after power-on (kernel 2.1 s + userspace 1.8 s
 | Wi-Fi | OK | QCA6390 (ath11k). Connected with iwd |
 | DSP | OK | adsp / cdsp / slpi start up |
 | Touch panel | OK | `generic ft5x06`. Available as SDL3 finger events (coordinates are relative to the panel's native portrait orientation; conversion for a 90-degree landscape rotation verified with `hako-sdl-hello`) |
-| External monitor (USB-C DisplayPort Alt Mode) | Works (with caveats) | Plugged in while running, the screen moves to the monitor (cage `-m last`, `HAKO_CAGE_MODE`). The built-in panel goes dark; 4:3 apps are scaled to the centre, raylib and similar use the whole 16:9. The monitor's touch (USB) and the built-in touch both map to the whole monitor. Sound moves to the monitor too (the launcher setting "External monitor audio" can keep it on the device). The DSP does not answer the first start of DP audio, so a moment of silence is played right after the switch (`/usr/lib/hako/hw/display-audio-prime`). **Caveat**: after unplugging the monitor, stopping the session (package update, shutdown) with nothing on USB-C stalls the display stack until something is plugged into USB-C. Plugging a PC or charger into USB-C once after unplugging the monitor avoids it |
+| External monitor (USB-C DisplayPort Alt Mode) | Works | Plugged in while running, the screen moves to the monitor (cage `-m last`, `HAKO_CAGE_MODE`). The built-in panel goes dark; 4:3 apps are scaled to the centre, raylib and similar use the whole 16:9. The monitor's touch (USB) and the built-in touch both map to the whole monitor. Sound moves to the monitor too (the launcher setting "External monitor audio" can keep it on the device). The DSP does not answer the first start of DP audio, so a moment of silence is played right after the switch (`/usr/lib/hako/hw/display-audio-prime`). (The earlier stall when the session stopped after unplugging the monitor came from the terminal reset of the USB serial getty; fixed in hako-dev 0.2.11) |
 | Bluetooth, headset microphone | Unverified | |
 
 ## 5. Common operations
@@ -492,7 +492,7 @@ small (neither krkrz nor Siv3D has a rotation mechanism).
 - Investigating features (items marked "Unverified" in the table in chapter 4)
   - Headset microphone (UCM Headset input) and headphone buttons.
   - Bluetooth: firmware loading, pairing (controllers and earphones), audio output.
-  - External monitor (USB-C DisplayPort Alt Mode): the stall when the session stops after unplugging (the DP driver apparently does not learn about the unplug; `typec_displayport` fails to probe with `-71`), and a real fix for the DSP not answering the first DP audio start.
+  - External monitor (USB-C DisplayPort Alt Mode): a real fix for the DSP not answering the first DP audio start; the first `typec_displayport` probe fails with `-71` (not yet host) and binds a little later.
 
 - A mechanism to version each app build automatically (since apt does not reinstall the same version).
 - Release image: read-only root, A/B slots, rollback based on a boot counter, an update mechanism (our own script at first, later RAUC).

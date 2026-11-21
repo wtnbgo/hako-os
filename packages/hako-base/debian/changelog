@@ -1,3 +1,13 @@
+hako-base (0.2.11) trixie; urgency=medium
+
+  * hako-dev: no systemd terminal reset (TTYReset=no, TTYVHangup=no) and
+    RestartSec=2s for the ttyGS0 serial getty. The reset writes to the tty
+    while holding the /dev/console lock; with no USB host the write blocked,
+    and PID 1 hung on that lock the next time the game session stopped
+    (after a monitor had taken over USB-C).
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 20:00:00 +0900
+
 hako-base (0.2.10) trixie; urgency=medium
 
   * audio-route runs the board hook display-audio-prime after switching to
