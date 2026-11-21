@@ -1,3 +1,35 @@
+hako-base (0.2.10) trixie; urgency=medium
+
+  * audio-route runs the board hook display-audio-prime after switching to
+  *   the external profile (also when the launcher setting changes);
+  *   audio-rescan no longer calls it before restarting PipeWire.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 19:30:00 +0900
+
+hako-base (0.2.9) trixie; urgency=medium
+
+  * audio-rescan: run the board hook /usr/lib/hako/hw/display-audio-prime (if
+    present) before restarting PipeWire after a display hotplug.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 19:00:00 +0900
+
+hako-base (0.2.8) trixie; urgency=medium
+
+  * hako-session: /usr/lib/hako/audio-route picks the sound card profile for an
+    external monitor (HDMI profile while one is connected, unless
+    ~/.config/hako/external-audio says "device"); audio-rescan runs it after
+    a display hotplug.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 18:30:00 +0900
+
+hako-base (0.2.7) trixie; urgency=medium
+
+  * hako-session: after an external display is plugged in or out, restart the
+    session user's PipeWire (udev -> hako-audio-rescan.service) so the HDMI /
+    DisplayPort profile appears or goes away.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 18:00:00 +0900
+
 hako-base (0.2.6) trixie; urgency=medium
 
   * hako-session: cage runs with -m last by default (HAKO_CAGE_MODE): an external

@@ -20,7 +20,8 @@ typedef enum {
 	T_START_FAILED, T_CLOSED, T_EXIT_ERROR, T_CRASHED, T_REBOOT_FAILED, T_POWER_FAILED,
 	T_BATTERY, T_CHARGING, T_VOLUME_HDR, T_MUTED,
 	T_NO_APPS, T_NO_APPS_HINT, T_DEV,
-	T_S_VOLUME, T_S_BRIGHT, T_S_LANGUAGE, T_S_TIMEZONE, T_S_INFO, T_S_REBOOT, T_S_POWEROFF,
+	T_S_VOLUME, T_S_BRIGHT, T_S_LANGUAGE, T_S_TIMEZONE, T_S_EXTAUDIO, T_S_INFO, T_S_REBOOT, T_S_POWEROFF,
+	T_EXT_MONITOR, T_EXT_DEVICE,
 	T_NO_SUCH_APP, T_TZ_FAILED, T_TIMEZONE_INFO,
 	T_UNAVAILABLE, T_NOT_ADJUSTABLE, T_VOLUME_NOTE,
 	T_ASK_REBOOT, T_ASK_POWEROFF, T_YES, T_NO, T_BACK,
@@ -33,6 +34,8 @@ typedef enum {
 extern Lang g_lang;
 void lang_load(void);
 void lang_save(void);
+/* Path of a file in ~/.config/hako/ (directories created if mkdirs). */
+void hako_config_path(const char *name, char *buf, size_t n, bool mkdirs);
 /* HAKO_LANGUAGE / LANGUAGE / LANG for the apps we start */
 void lang_export(void);
 const char *lang_code(Lang l);

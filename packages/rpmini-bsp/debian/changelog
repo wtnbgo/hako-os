@@ -1,3 +1,19 @@
+rpmini-bsp (0.2.4) trixie; urgency=medium
+
+  * display-audio-prime: play 0.5 s of silence through PipeWire instead of
+  *   opening the PCM with aplay. The first DP port start fails after every
+  *   PipeWire (re)start, so it must be primed after the profile switch.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 19:30:00 +0900
+
+rpmini-bsp (0.2.3) trixie; urgency=medium
+
+  * /usr/lib/hako/hw/display-audio-prime: open the DisplayPort PCM once after a
+  *   monitor is plugged in; the DSP never answers the first start of the DP
+  *   port, every later one works.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 19:00:00 +0900
+
 rpmini-bsp (0.2.2) trixie; urgency=medium
 
   * udev: rotate only the built-in touch panel; USB touch monitors were

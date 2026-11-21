@@ -1,0 +1,9 @@
+[Unit]
+Description=hako: let PipeWire probe audio again after a display hotplug
+# started by /usr/lib/udev/rules.d/71-hako-display-audio.rules
+
+[Service]
+Type=oneshot
+# let the DP link and its audio come up first
+ExecStartPre=/bin/sleep 2
+ExecStart=/usr/lib/hako/audio-rescan

@@ -1,3 +1,12 @@
+hako-launcher (0.2.3) trixie; urgency=medium
+
+  * Settings: "External monitor audio" (from the monitor / from the device),
+    saved in ~/.config/hako/external-audio and applied by
+    /usr/lib/hako/audio-route (hako-session 0.2.8).
+  * Settings rows are a little lower to fit the new item.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 18:30:00 +0900
+
 hako-launcher (0.2.2) trixie; urgency=medium
 
   * Refit the canvas when the output changes size (external monitor taking over).

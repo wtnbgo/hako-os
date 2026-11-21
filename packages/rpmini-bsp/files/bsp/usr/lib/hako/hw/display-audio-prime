@@ -1,0 +1,10 @@
+#!/bin/sh
+# Retroid Pocket Mini (SM8250, q6afe): the DSP does not answer the first start
+# of the DisplayPort audio port after PipeWire (re)opened the card; it times
+# out after 3 s and every start after that works. Play a moment of silence
+# once, so the first real sound is not lost.
+# Run as the session user by /usr/lib/hako/audio-route right after it switched
+# the card to the HDMI / DisplayPort profile.
+sleep 1
+timeout 10 pw-play /usr/share/rpmini/silence.wav >/dev/null 2>&1
+exit 0

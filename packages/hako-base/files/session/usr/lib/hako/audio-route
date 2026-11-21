@@ -1,0 +1,47 @@
+#!/bin/sh
+# Pick the sound card profile for an external monitor, as the user of the
+# session (hako). Run by audio-rescan after a display hotplug and by
+# hako-launcher when the "External monitor audio" setting changes.
+#
+# Setting: ~/.config/hako/external-audio
+#   monitor (default)  sound goes to the external monitor while one is connected
+#   device             sound stays on the built-in speaker / headphones
+# The external profile is the card profile whose name contains "HDMI"; it only
+# exists while a monitor is connected (WirePlumber probes it at start).
+home=$(getent passwd "$(id -un)" | cut -d: -f6)
+mode=$(cat "${XDG_CONFIG_HOME:-$home/.config}/hako/external-audio" 2>/dev/null)
+[ "$mode" = device ] || mode=monitor
+
+# id of the first ALSA card device
+card=$(pw-cli ls Device 2>/dev/null | awk '
+	/^[[:space:]]*id [0-9]+,/ { id = $2; sub(",", "", id) }
+	/device.api = "alsa"/ { print id; exit }')
+[ -n "$card" ] || exit 0
+
+# "index name" for every profile of the card
+profiles=$(pw-cli enum-params "$card" EnumProfile 2>/dev/null | awk '
+	/Profile:index/ { want = "index"; next }
+	/Profile:name/  { want = "name"; next }
+	want == "index" && $1 == "Int"    { idx = $2; want = "" }
+	want == "name"  && $1 == "String" { gsub("\"", "", $2); print idx, $2; want = "" }')
+ext=$(printf '%s\n' "$profiles" | awk 'toupper($2) ~ /HDMI/ { print $1; exit }')
+int=$(printf '%s\n' "$profiles" | awk '$2 == "HiFi" { print $1; exit }')
+
+connected=no
+for s in /sys/class/drm/card*-DP-*/status /sys/class/drm/card*-HDMI-*/status; do
+	[ "$(cat "$s" 2>/dev/null)" = connected ] && connected=yes
+done
+
+if [ "$mode" = monitor ] && [ "$connected" = yes ] && [ -n "$ext" ]; then
+	target=$ext
+else
+	target=$int
+fi
+[ -n "$target" ] || exit 0
+echo "audio-route: mode=$mode monitor=$connected -> profile $target"
+wpctl set-profile "$card" "$target" || exit 1
+# board hook: get the external display's audio ready (see rpmini-bsp)
+if [ "$target" = "$ext" ] && [ -x /usr/lib/hako/hw/display-audio-prime ]; then
+	/usr/lib/hako/hw/display-audio-prime
+fi
+exit 0

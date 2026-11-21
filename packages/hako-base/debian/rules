@@ -13,4 +13,6 @@ override_dh_fixperms:
 		debian/hako-base/usr/lib/hako/grow-data \
 		debian/hako-session/usr/lib/hako/session-run \
 		debian/hako-session/usr/lib/hako/session-app \
-		debian/hako-session/usr/lib/hako/volume
+		debian/hako-session/usr/lib/hako/volume \
+		debian/hako-session/usr/lib/hako/audio-rescan \
+		debian/hako-session/usr/lib/hako/audio-route

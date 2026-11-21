@@ -1,0 +1,5 @@
+# hako-session: when an external display is plugged in or out, let PipeWire
+# probe the sound card again. WirePlumber only offers the HDMI / DisplayPort
+# profile if the DP PCM could be opened when it started, which fails while
+# nothing is connected.
+ACTION=="change", SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ENV{HOTPLUG}=="1", RUN+="/usr/bin/systemctl --no-block start hako-audio-rescan.service"

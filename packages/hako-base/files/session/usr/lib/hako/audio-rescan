@@ -1,0 +1,16 @@
+#!/bin/sh
+# Restart the session user's PipeWire so that WirePlumber probes the card again
+# (run by hako-audio-rescan.service after a display hotplug), then pick the
+# profile for the external monitor (audio-route). Apps playing sound at that
+# moment lose their stream.
+uid=$(id -u hako 2>/dev/null) || exit 0
+[ -d "/run/user/$uid" ] || exit 0
+as_hako() { runuser -u hako -- env XDG_RUNTIME_DIR="/run/user/$uid" "$@"; }
+as_hako systemctl --user try-restart pipewire.service wireplumber.service || exit 0
+# wait until WirePlumber has set the card up
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+	sleep 0.5
+	as_hako pw-cli ls Device 2>/dev/null | grep -q 'device.api = "alsa"' && break
+done
+sleep 1
+as_hako /usr/lib/hako/audio-route

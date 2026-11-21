@@ -156,7 +156,7 @@ The old names (rpmini-session / rpmini-dev / rpmini-launcher / rpmini-sdl-hello)
   When the app exits, it returns to the list (an error exit or crash shows a message).
 - **Long-press the HOME button (1 second)** to terminate the running app and return. triggerhappy (`/etc/triggerhappy/triggers.d/hako-home.conf`)
   calls `/usr/lib/hako/home-button`, which sends SIGUSR1 to the launcher. The launcher sends SIGTERM to the app's process group, then SIGKILL after 3 seconds.
-- Settings tab: volume (a test sound plays when changed), screen brightness (logind's `SetBrightness`), language, time zone (systemd-timedated),
+- Settings tab: volume (a test sound plays when changed), screen brightness (logind's `SetBrightness`), language, time zone (systemd-timedated), external monitor audio (`~/.config/hako/external-audio`, applied by `/usr/lib/hako/audio-route`),
   system info, reboot, power off (power and time zone are allowed for user `hako` via the polkit rule `50-hako-launcher.rules`).
   The time zone is passed to started apps via `TZ`.
 - Starting from outside: `/usr/lib/hako/launch-app <id>` (run as root) makes the launcher start a registered app.
@@ -233,7 +233,7 @@ The app appears about 6.5 seconds after power-on (kernel 2.1 s + userspace 1.8 s
 | Wi-Fi | OK | QCA6390 (ath11k). Connected with iwd |
 | DSP | OK | adsp / cdsp / slpi start up |
 | Touch panel | OK | `generic ft5x06`. Available as SDL3 finger events (coordinates are relative to the panel's native portrait orientation; conversion for a 90-degree landscape rotation verified with `hako-sdl-hello`) |
-| External monitor (USB-C DisplayPort Alt Mode) | Video works, audio does not | Plugged in while running, the screen moves to the monitor (cage `-m last`, `HAKO_CAGE_MODE`). The built-in panel goes dark; 4:3 apps are scaled to the centre, raylib and similar use the whole 16:9. The monitor's touch (USB) and the built-in touch both map to the whole monitor. Audio fails because the DSP cannot start the DP port (`AFE enable for port 0x6020 failed -110`). Restarting the session with the monitor attached can stall the display stack until the monitor is unplugged |
+| External monitor (USB-C DisplayPort Alt Mode) | Works (with caveats) | Plugged in while running, the screen moves to the monitor (cage `-m last`, `HAKO_CAGE_MODE`). The built-in panel goes dark; 4:3 apps are scaled to the centre, raylib and similar use the whole 16:9. The monitor's touch (USB) and the built-in touch both map to the whole monitor. Sound moves to the monitor too (the launcher setting "External monitor audio" can keep it on the device). The DSP does not answer the first start of DP audio, so a moment of silence is played right after the switch (`/usr/lib/hako/hw/display-audio-prime`). **Caveat**: after unplugging the monitor, stopping the session (package update, shutdown) with nothing on USB-C stalls the display stack until something is plugged into USB-C. Plugging a PC or charger into USB-C once after unplugging the monitor avoids it |
 | Bluetooth, headset microphone | Unverified | |
 
 ## 5. Common operations
@@ -492,7 +492,7 @@ small (neither krkrz nor Siv3D has a rotation mechanism).
 - Investigating features (items marked "Unverified" in the table in chapter 4)
   - Headset microphone (UCM Headset input) and headphone buttons.
   - Bluetooth: firmware loading, pairing (controllers and earphones), audio output.
-  - External monitor (USB-C DisplayPort Alt Mode): audio (the DSP cannot start the DP port; when plugged in after boot, PipeWire does not offer the HDMI profile either), and the stall when restarting with the monitor attached (kernel side).
+  - External monitor (USB-C DisplayPort Alt Mode): the stall when the session stops after unplugging (the DP driver apparently does not learn about the unplug; `typec_displayport` fails to probe with `-71`), and a real fix for the DSP not answering the first DP audio start.
 
 - A mechanism to version each app build automatically (since apt does not reinstall the same version).
 - Release image: read-only root, A/B slots, rollback based on a boot counter, an update mechanism (our own script at first, later RAUC).

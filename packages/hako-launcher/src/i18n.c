@@ -39,7 +39,7 @@ static bool parse(const char *s, Lang *out)
 	return false;
 }
 
-static void config_path(char *buf, size_t n, bool mkdirs)
+void hako_config_path(const char *name, char *buf, size_t n, bool mkdirs)
 {
 	const char *xdg = getenv("XDG_CONFIG_HOME");
 	char dir[512];
@@ -57,7 +57,12 @@ static void config_path(char *buf, size_t n, bool mkdirs)
 		}
 		mkdir(dir, 0755);
 	}
-	snprintf(buf, n, "%s/language", dir);
+	snprintf(buf, n, "%s/%s", dir, name);
+}
+
+static void config_path(char *buf, size_t n, bool mkdirs)
+{
+	hako_config_path("language", buf, n, mkdirs);
 }
 
 void lang_load(void)
@@ -131,6 +136,9 @@ static const char *TEXT[T_COUNT][LANG_COUNT] = {
 	[T_S_TIMEZONE]     = { "タイムゾーン", "Time zone" },
 	[T_S_INFO]         = { "システム情報", "System information" },
 	[T_NO_SUCH_APP]    = { "アプリ「%s」が見つかりません", "No application \"%s\"" },
+	[T_S_EXTAUDIO]     = { "外部モニターの音声", "External monitor audio" },
+	[T_EXT_MONITOR]    = { "モニターから", "From the monitor" },
+	[T_EXT_DEVICE]     = { "本体から", "From the device" },
 	[T_TZ_FAILED]      = { "タイムゾーンを変更できませんでした", "Could not change the time zone" },
 	[T_TIMEZONE_INFO]  = { "タイムゾーン", "Time zone" },
 	[T_S_REBOOT]       = { "再起動", "Reboot" },

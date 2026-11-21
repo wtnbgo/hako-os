@@ -12,5 +12,6 @@ override_dh_fixperms:
 		debian/rpmini-bsp/usr/sbin/rpmini-update-esp \
 		debian/rpmini-bsp/usr/lib/rpmini/usb-gadget \
 		debian/rpmini-bsp/usr/lib/hako/hw/volume \
+		debian/rpmini-bsp/usr/lib/hako/hw/display-audio-prime \
 		debian/rpmini-bsp/etc/kernel/postinst.d/zz-rpmini-esp \
 		debian/rpmini-bsp/etc/initramfs/post-update.d/zz-rpmini-esp

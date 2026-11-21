@@ -60,12 +60,13 @@
 #define SET_X 140
 #define SET_W 1000
 #define SET_Y 130
-#define SET_H 100
+#define SET_H 88
+#define SET_TY ((SET_H - 10) / 2 - 21) /* text offset in a row */
 #define BAR_X (SET_X + 380)
 #define BAR_W 440
 
 enum { TAB_APPS, TAB_SETTINGS, TAB_COUNT };
-enum { S_VOLUME, S_BRIGHT, S_LANGUAGE, S_TIMEZONE, S_INFO, S_REBOOT, S_POWEROFF, S_COUNT };
+enum { S_VOLUME, S_BRIGHT, S_LANGUAGE, S_TIMEZONE, S_EXTAUDIO, S_INFO, S_REBOOT, S_POWEROFF, S_COUNT };
 
 /* time zones offered in the settings (names: ja, en) */
 static const struct { const char *tz, *name[LANG_COUNT]; } TZ[] = {
@@ -135,6 +136,7 @@ typedef struct {
 	int napps;
 	int tab, sel_app, sel_set, top_row;
 	char tz[64];      /* current time zone */
+	bool ext_audio_device; /* external monitor audio stays on the device */
 	bool info;
 	char info_lines[40][160];
 	int ninfo;
@@ -376,6 +378,47 @@ static void set_language(Launcher *l, Lang lang)
 	l->dirty = true;
 }
 
+/* "External monitor audio": ~/.config/hako/external-audio = monitor | device,
+ * applied by /usr/lib/hako/audio-route (also run after a display hotplug). */
+static void ext_audio_load(Launcher *l)
+{
+	char path[600], buf[16] = "";
+	hako_config_path("external-audio", path, sizeof path, false);
+	FILE *f = fopen(path, "r");
+	if (f) {
+		if (!fgets(buf, sizeof buf, f))
+			buf[0] = 0;
+		fclose(f);
+	}
+	l->ext_audio_device = !strncmp(buf, "device", 6);
+}
+
+static void set_ext_audio(Launcher *l, bool device)
+{
+	char path[600];
+	hako_config_path("external-audio", path, sizeof path, true);
+	FILE *f = fopen(path, "w");
+	if (!f) {
+		SDL_Log("save %s: %s", path, strerror(errno));
+		return;
+	}
+	fprintf(f, "%s\n", device ? "device" : "monitor");
+	fclose(f);
+	l->ext_audio_device = device;
+	/* apply now, without waiting: double fork so nothing is left to reap */
+	pid_t pid = fork();
+	if (pid == 0) {
+		if (fork() == 0) {
+			execl("/usr/lib/hako/audio-route", "audio-route", (char *)NULL);
+			_exit(127);
+		}
+		_exit(0);
+	}
+	if (pid > 0)
+		waitpid(pid, NULL, 0);
+	l->dirty = true;
+}
+
 static int tz_index(const char *tz)
 {
 	for (int i = 0; i < TZ_COUNT; i++)
@@ -402,6 +445,8 @@ static void settings_adjust(Launcher *l, int dir)
 		set_language(l, (Lang)((g_lang + LANG_COUNT + dir) % LANG_COUNT));
 	if (l->sel_set == S_TIMEZONE)
 		step_timezone(l, dir);
+	if (l->sel_set == S_EXTAUDIO)
+		set_ext_audio(l, !l->ext_audio_device);
 	if (l->sel_set == S_VOLUME && s->volume >= 0) {
 		sys_set_volume(s, roundf((s->volume + dir * 0.05f) * 20) / 20);
 		beep();
@@ -419,6 +464,9 @@ static void settings_activate(Launcher *l)
 		break;
 	case S_TIMEZONE:
 		step_timezone(l, 1);
+		break;
+	case S_EXTAUDIO:
+		set_ext_audio(l, !l->ext_audio_device);
 		break;
 	case S_INFO:
 		l->ninfo = sys_info(l->info_lines, SDL_arraysize(l->info_lines));
@@ -637,46 +685,49 @@ static void draw_apps(Launcher *l)
 
 static void slider(float y, float v, const char *value)
 {
-	ui_fill(&ui, BAR_X, y + 38, BAR_W, 14, 0x3a4152);
-	ui_fill(&ui, BAR_X, y + 38, BAR_W * SDL_clamp(v, 0, 1), 14, C_ACCENT);
-	ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + 24, C_TEXT, ALIGN_RIGHT, 0, "%s", value);
+	ui_fill(&ui, BAR_X, y + SET_TY + 14, BAR_W, 14, 0x3a4152);
+	ui_fill(&ui, BAR_X, y + SET_TY + 14, BAR_W * SDL_clamp(v, 0, 1), 14, C_ACCENT);
+	ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_TEXT, ALIGN_RIGHT, 0, "%s", value);
 }
 
 static void draw_settings(Launcher *l)
 {
 	static const TextId name[S_COUNT] = { T_S_VOLUME, T_S_BRIGHT, T_S_LANGUAGE, T_S_TIMEZONE,
-	                                      T_S_INFO, T_S_REBOOT, T_S_POWEROFF };
+	                                      T_S_EXTAUDIO, T_S_INFO, T_S_REBOOT, T_S_POWEROFF };
 	for (int i = 0; i < S_COUNT; i++) {
 		float y = SET_Y + i * SET_H;
 		bool sel = i == l->sel_set;
 		ui_fill(&ui, SET_X, y, SET_W, SET_H - 10, sel ? C_TILE_SEL : C_TILE);
 		if (sel)
 			ui_fill(&ui, SET_X, y, 8, SET_H - 10, C_ACCENT);
-		ui_text(&ui, ui.mid, SET_X + 40, y + 24, i == S_POWEROFF ? C_WARN : C_TEXT, ALIGN_LEFT, 0, "%s", T(name[i]));
+		ui_text(&ui, ui.mid, SET_X + 40, y + SET_TY, i == S_POWEROFF ? C_WARN : C_TEXT, ALIGN_LEFT, 0, "%s", T(name[i]));
 		char buf[64];
 		if (i == S_VOLUME) {
 			if (l->sys.volume < 0)
-				ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + 24, C_DIM, ALIGN_RIGHT, 0, "%s", T(T_UNAVAILABLE));
+				ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_DIM, ALIGN_RIGHT, 0, "%s", T(T_UNAVAILABLE));
 			else {
 				snprintf(buf, sizeof buf, "%d%%%s", (int)roundf(l->sys.volume * 100), l->sys.muted ? T(T_MUTED) : "");
 				slider(y, l->sys.volume, buf);
 			}
 		} else if (i == S_BRIGHT) {
 			if (!l->sys.bright_max)
-				ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + 24, C_DIM, ALIGN_RIGHT, 0, "%s", T(T_NOT_ADJUSTABLE));
+				ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_DIM, ALIGN_RIGHT, 0, "%s", T(T_NOT_ADJUSTABLE));
 			else {
 				float f = (float)l->sys.bright / l->sys.bright_max;
 				snprintf(buf, sizeof buf, "%d%%", (int)roundf(f * 100));
 				slider(y, f, buf);
 			}
 		} else if (i == S_LANGUAGE)
-			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + 24, C_TEXT, ALIGN_RIGHT, 0, "‹  %s  ›", lang_name(g_lang));
+			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_TEXT, ALIGN_RIGHT, 0, "‹  %s  ›", lang_name(g_lang));
 		else if (i == S_TIMEZONE) {
 			int t = tz_index(l->tz);
-			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + 24, C_TEXT, ALIGN_RIGHT, 0, "‹  %s  ›",
+			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_TEXT, ALIGN_RIGHT, 0, "‹  %s  ›",
 			        t >= 0 ? TZ[t].name[g_lang] : l->tz);
-		} else
-			ui_text(&ui, ui.mid, SET_X + SET_W - 40, y + 24, C_DIM, ALIGN_RIGHT, 0, "›");
+		} else if (i == S_EXTAUDIO)
+			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_TEXT, ALIGN_RIGHT, 0, "‹  %s  ›",
+			        T(l->ext_audio_device ? T_EXT_DEVICE : T_EXT_MONITOR));
+		else
+			ui_text(&ui, ui.mid, SET_X + SET_W - 40, y + SET_TY, C_DIM, ALIGN_RIGHT, 0, "›");
 	}
 	ui_text(&ui, ui.small, SET_X, SET_Y + S_COUNT * SET_H + 10, C_DIM, ALIGN_LEFT, 0, "%s", T(T_VOLUME_NOTE));
 }
@@ -921,6 +972,7 @@ int main(int argc, char **argv)
 	static Launcher l;
 	sys_timezone(l.tz, sizeof l.tz);
 	sys_apply_timezone(l.tz);
+	ext_audio_load(&l);
 	Screen s;
 	if (!screen_open(&s, rot))
 		return 1;
