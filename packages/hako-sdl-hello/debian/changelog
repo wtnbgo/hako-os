@@ -1,3 +1,10 @@
+hako-sdl-hello (0.2.3) trixie; urgency=medium
+
+  * Open every connected gamepad; the display follows the pad used last and
+  *   START + SELECT on any pad quits.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 22:30:00 +0900
+
 hako-sdl-hello (0.2.2) trixie; urgency=medium
 
   * Refit the canvas when the output changes size (external monitor taking over).

@@ -225,6 +225,8 @@ int main(int argc, char **argv)
 	float fit = SDL_min(ow / cw, oh / chh);
 	SDL_FRect dst = { (ow - CW * fit) / 2, (oh - CH * fit) / 2, CW * fit, CH * fit };
 
+	/* every connected pad is opened; the display follows the one used last */
+	SDL_Gamepad *pads[8] = { 0 };
 	SDL_Gamepad *gp = NULL;
 	Touch touch[MAX_TOUCH] = { 0 };
 	float bx = 200, by = 200, vx = 6, vy = 4.5f;
@@ -241,16 +243,27 @@ int main(int argc, char **argv)
 				run = false;
 				break;
 			case SDL_EVENT_GAMEPAD_ADDED:
-				if (!gp) {
-					gp = SDL_OpenGamepad(e.gdevice.which);
-					char *map = SDL_GetGamepadMapping(gp);
-					printf("gamepad: %s (%s)\nmapping: %s\n", SDL_GetGamepadName(gp),
-					       SDL_GetGamepadStringForType(SDL_GetGamepadType(gp)), map ? map : "(none)");
-					SDL_free(map);
-					fflush(stdout);
-				}
+				for (int i = 0; i < (int)SDL_arraysize(pads); i++)
+					if (!pads[i]) {
+						SDL_Gamepad *g = pads[i] = SDL_OpenGamepad(e.gdevice.which);
+						if (!g)
+							break;
+						if (!gp)
+							gp = g;
+						char *map = SDL_GetGamepadMapping(g);
+						printf("gamepad: %s (%s)\nmapping: %s\n", SDL_GetGamepadName(g),
+						       SDL_GetGamepadStringForType(SDL_GetGamepadType(g)), map ? map : "(none)");
+						SDL_free(map);
+						fflush(stdout);
+						break;
+					}
+				break;
+			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+				if (e.gaxis.value > 16000 || e.gaxis.value < -16000)
+					gp = SDL_GetGamepadFromID(e.gaxis.which);
 				break;
 			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+				gp = SDL_GetGamepadFromID(e.gbutton.which);
 				switch (e.gbutton.button) {
 				case SDL_GAMEPAD_BUTTON_SOUTH: beep(523.25f); break; /* C5 */
 				case SDL_GAMEPAD_BUTTON_EAST:  beep(659.25f); break; /* E5 */
@@ -260,10 +273,15 @@ int main(int argc, char **argv)
 				}
 				break;
 			case SDL_EVENT_GAMEPAD_REMOVED:
-				if (gp && SDL_GetGamepadID(gp) == e.gdevice.which) {
-					SDL_CloseGamepad(gp);
-					gp = NULL;
-				}
+				for (int i = 0; i < (int)SDL_arraysize(pads); i++)
+					if (pads[i] && SDL_GetGamepadID(pads[i]) == e.gdevice.which) {
+						if (gp == pads[i])
+							gp = NULL;
+						SDL_CloseGamepad(pads[i]);
+						pads[i] = NULL;
+					}
+				for (int i = 0; !gp && i < (int)SDL_arraysize(pads); i++)
+					gp = pads[i];
 				break;
 			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
 				/* the output changed (external monitor taking over): refit */
@@ -333,8 +351,11 @@ int main(int argc, char **argv)
 		color(150, 150, 170);
 		text(40, 80, 2, "%s / %s  %dx%d rot %d  %d fps", SDL_GetCurrentVideoDriver(), SDL_GetRendererName(ren),
 		     ow, oh, rotate, fps);
-		text(40, 104, 2, "pad: %s   audio: %s", gp ? SDL_GetGamepadName(gp) : "(none)",
-		     audio ? SDL_GetCurrentAudioDriver() : "(none)");
+		int npads = 0;
+		for (int i = 0; i < (int)SDL_arraysize(pads); i++)
+			npads += pads[i] != NULL;
+		text(40, 104, 2, "pad: %s (%d connected, the last used is shown)   audio: %s",
+		     gp ? SDL_GetGamepadName(gp) : "(none)", npads, audio ? SDL_GetCurrentAudioDriver() : "(none)");
 		text(40, 128, 2, "ABXY: beep");
 		text(CW - 520, 30, 2, "quit: hold START + SELECT");
 

@@ -4,7 +4,8 @@
  * A small 3D scene: move the cube with the left stick / d-pad, jump with the
  * bottom face button, orbit the camera with the right stick, zoom with L2/R2.
  * The overlay shows the face buttons, sticks, touch points and FPS, and every
- * face button plays a tone. START + SELECT (or Escape) quits.
+ * face button plays a tone. START + SELECT (or Escape) quits. Any connected
+ * pad works: the sample follows the one used last.
  *
  * raylib's GAMEPAD_BUTTON_RIGHT_FACE_* are positions (SDL convention). With
  * HAKO_PAD_LAYOUT=label hako-session swaps a<->b and x<->y, so the button
@@ -17,7 +18,8 @@
 #include "raylib.h"
 #include "raymath.h"
 
-#define PAD 0
+/* the pad used last; every connected pad (up to raylib's 4) can drive the sample */
+static int PAD = 0;
 #define TONES 4
 
 static Sound make_tone(float freq)
@@ -42,6 +44,30 @@ static void face(int button, Vector2 at, const char *label)
 	DrawCircleLinesV(at, 34, RAYWHITE);
 	int w = MeasureText(label, 30);
 	DrawText(label, (int)at.x - w / 2, (int)at.y - 15, 30, RAYWHITE);
+}
+
+/* switch PAD to another pad as soon as it is used */
+static void follow_pad(void)
+{
+	if (!IsGamepadAvailable(PAD))
+		for (int p = 0; p < 4; p++)
+			if (IsGamepadAvailable(p)) {
+				PAD = p;
+				break;
+			}
+	for (int p = 0; p < 4; p++) {
+		if (p == PAD || !IsGamepadAvailable(p))
+			continue;
+		bool used = false;
+		for (int b = GAMEPAD_BUTTON_LEFT_FACE_UP; b <= GAMEPAD_BUTTON_RIGHT_THUMB && !used; b++)
+			used = IsGamepadButtonDown(p, b);
+		for (int a = GAMEPAD_AXIS_LEFT_X; a <= GAMEPAD_AXIS_RIGHT_Y && !used; a++)
+			used = fabsf(GetGamepadAxisMovement(p, a)) > 0.5f;
+		if (used) {
+			PAD = p;
+			return;
+		}
+	}
 }
 
 static void stick(Vector2 c, float x, float y, bool pressed)
@@ -71,6 +97,7 @@ int main(void)
 	while (!WindowShouldClose()) {
 		float dt = GetFrameTime();
 		t += dt;
+		follow_pad();
 		bool pad = IsGamepadAvailable(PAD);
 
 		for (int i = 0; i < TONES; i++)
@@ -134,7 +161,11 @@ int main(void)
 		EndMode3D();
 
 		DrawText(TextFormat("raylib %s  SDL3  %dx%d  FPS %d", RAYLIB_VERSION, w, h, GetFPS()), 24, 20, 28, RAYWHITE);
-		DrawText(pad ? GetGamepadName(PAD) : "no gamepad", 24, 56, 24, LIGHTGRAY);
+		int npads = 0;
+		for (int p = 0; p < 4; p++)
+			npads += IsGamepadAvailable(p);
+		DrawText(pad ? TextFormat("%s  (pad %d of %d, the last used)", GetGamepadName(PAD), PAD + 1, npads) : "no gamepad",
+		         24, 56, 24, LIGHTGRAY);
 		DrawText(by_label ? "HAKO_PAD_LAYOUT=label" : "HAKO_PAD_LAYOUT=position", 24, 86, 20, GRAY);
 		DrawText(TextFormat("L stick: move  %s: jump  R stick: camera  L2/R2: zoom  START+SELECT: quit",
 		                    by_label ? "A" : "bottom (B)"),
