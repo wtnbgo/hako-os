@@ -1,3 +1,10 @@
+hako-base (0.2.12) trixie; urgency=medium
+
+  * hako-session: depend on bluez and libspa-0.2-bluetooth, so Bluetooth
+    gamepads (and audio devices through PipeWire) work out of the box.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 21:00:00 +0900
+
 hako-base (0.2.11) trixie; urgency=medium
 
   * hako-dev: no systemd terminal reset (TTYReset=no, TTYVHangup=no) and
