@@ -1,0 +1,3 @@
+#!/bin/sh
+# $1 = kernel version. Runs after initramfs-tools (alphabetical order).
+exec /usr/sbin/rg55g1-update-esp "$1"

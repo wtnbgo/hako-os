@@ -1,11 +1,10 @@
 # Upstream pins for the kernel build. Change these only on purpose.
 ROCKNIX_REPO=https://github.com/ROCKNIX/distribution.git
 ROCKNIX_COMMIT=7f24ef2268ffe29b07ac6f99772d4ec950352bb4
-ROCKNIX_DEVICE_DIR=projects/ROCKNIX/devices/SM8250
 OPENABL_TAG=v1.2
-# ROCKNIX packages/linux/package.mk: SM8250 uses vanilla kernel.org 7.2
+# ROCKNIX packages/linux/package.mk: SM8250 and SM4450 use vanilla kernel.org 7.2
 # (+ device patches in /patches/linux and common patch dirs in packages/linux/patches)
 KERNEL_VERSION=7.2
 KERNEL_SHA256=f9fef3d14c0df53819026f4be74459835c2a0b0dcbf5b5bbd9ea19f0829402b3
 LINUX_FIRMWARE_TAG=20261019
-KERNEL_PKGREV=5
+# per SoC: device dir, package name, KERNEL_PKGREV, firmware -> soc/<SOC>.conf

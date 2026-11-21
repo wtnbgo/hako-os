@@ -74,5 +74,6 @@ hako-os itself is MIT licensed (see LICENSE). Third-party parts keep their own l
 - UCM configuration in rpmini-bsp (from ROCKNIX's patches to [alsa-ucm-conf](https://github.com/alsa-project/alsa-ucm-conf)): BSD-3-Clause
 - [LÖVE](https://love2d.org/) (submodule, packages/hako-love/love): zlib license
 - [raylib](https://www.raylib.com/) (submodule, packages/hako-raylib-hello/raylib): zlib license
-- Firmware listed in kernel/firmware.list (fetched at build time from
-  [linux-firmware](https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git)): see its WHENCE file
+- Firmware listed in kernel/firmware-<SOC>.list (fetched at build time from
+  [linux-firmware](https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git), and for SM4450 also from
+  [ROCKNIX extra-firmware](https://github.com/ROCKNIX/extra-firmware)): see their license files

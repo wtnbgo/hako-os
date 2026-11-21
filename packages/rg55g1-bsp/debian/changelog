@@ -1,0 +1,15 @@
+rg55g1-bsp (0.1.1) trixie; urgency=medium
+
+  * WirePlumber settings taken over from rpmini-bsp (S16LE, initial volume),
+    to be checked on the device.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 23:50:00 +0900
+
+rg55g1-bsp (0.1.0) trixie; urgency=medium
+
+  * New package: board support for the Anbernic RG 55G1 (SM4450), made from
+    rpmini-bsp (ESP update, USB gadget, session hooks) and ROCKNIX's UCM.
+    Rotation, touch matrix, pad layout and mixer names still to be checked
+    on the device.
+
+ -- hako-os <hako@hako-os>  Sat, 21 Nov 2026 23:30:00 +0900

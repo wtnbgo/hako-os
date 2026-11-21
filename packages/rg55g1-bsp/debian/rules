@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_installsystemd:
+	# never restart the gadget on upgrade: it drops the USB link that the upgrade runs over
+	dh_installsystemd -prg55g1-bsp --no-stop-on-upgrade --no-restart-after-upgrade rg55g1-usb-gadget.service
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 0755 \
+		debian/rg55g1-bsp/usr/sbin/rg55g1-update-esp \
+		debian/rg55g1-bsp/usr/lib/rg55g1/usb-gadget \
+		debian/rg55g1-bsp/usr/lib/hako/hw/volume \
+		debian/rg55g1-bsp/etc/kernel/postinst.d/zz-rg55g1-esp \
+		debian/rg55g1-bsp/etc/initramfs/post-update.d/zz-rg55g1-esp

@@ -1,0 +1,26 @@
+Source: rg55g1-bsp
+Section: misc
+Priority: optional
+Maintainer: hako-os <hako@hako-os>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: rg55g1-bsp
+Architecture: all
+Depends: ${misc:Depends},
+ linux-image-7.2.0-sm4450,
+ initramfs-tools,
+ systemd,
+ alsa-ucm-conf,
+ alsa-utils
+Conflicts: rpmini-bsp
+Description: Anbernic RG 55G1 board support for hako
+ Board support for the Anbernic RG 55G1 (Qualcomm SM4450 / Snapdragon G1 Gen 2)
+ booted by OpenABL:
+  - installs the kernel, initrd and DTBs to the FAT boot partition and
+    writes the Boot Loader Specification entry (rg55g1-update-esp)
+  - ALSA UCM profile for the speakers / headphones (from ROCKNIX)
+  - USB-C device mode: CDC-NCM network (192.168.7.2) and CDC-ACM serial
+  - session defaults for the portrait panel (/usr/lib/hako/session.d/10-rg55g1.sh),
+    touch rotation (udev) and the volume keys without PipeWire

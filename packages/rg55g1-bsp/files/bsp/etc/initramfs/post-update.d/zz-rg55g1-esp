@@ -1,0 +1,3 @@
+#!/bin/sh
+# $1 = kernel version, $2 = initrd path. Re-copy after "update-initramfs -u".
+exec /usr/sbin/rg55g1-update-esp "$1"

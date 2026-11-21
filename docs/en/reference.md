@@ -53,7 +53,7 @@ Status as of 2026-11-20.
 | `kernel/` | Packages the kernel as a .deb. kernel.org 7.2 + ROCKNIX's SM8250 patches and DTS. Details in `kernel/README.md` |
 | `kernel/SOURCE.pin` | Source versions used (ROCKNIX commit, kernel version and sha256, linux-firmware tag, package version) |
 | `kernel/config/*.config` | Fragments layered on top of ROCKNIX's config (for Debian's initramfs, USB gadget, etc.) |
-| `kernel/firmware.list` | Firmware built into the kernel (GPU, DSP, etc.) |
+| `kernel/firmware-<SOC>.list` | Firmware built into the kernel (GPU, DSP, etc.) |
 | `packages/` | Sources of our own packages (tables below). `hako-base` (hako-base / hako-session / hako-dev), `hako-launcher`, `hako-sdl-hello`, `hako-love`, `hako-raylib-hello`, `rpmini-bsp` |
 | `packages/hako-love/love`, `packages/hako-raylib-hello/raylib` | Upstream sources of LÖVE and raylib (git submodules, pinned versions). Fetch with `git submodule update --init` |
 | `samples/` | Samples that are not packaged (placed in `/data/dev/apps/` to run). `love-hello/` checks that LÖVE works |
@@ -326,7 +326,7 @@ kernel/build.sh            # → out/kernel/linux-image-7.2.0-rpmini_<version>_a
 kernel/build.sh prepare    # Only apply patches and configure (to check when patches do not apply)
 ```
 
-- When rebuilding with the same kernel version, bump `KERNEL_PKGREV` in `kernel/SOURCE.pin` (otherwise apt will not update).
+- When rebuilding with the same kernel version, bump `KERNEL_PKGREV` in `kernel/soc/<SOC>.conf` (otherwise apt will not update).
 - To deploy to the device: `bash scripts/dev-update.sh linux-image-7.2.0-rpmini`. `rpmini-update-esp` rewrites the ESP automatically, so a reboot boots the new kernel.
 - If the new kernel does not boot, read the SD card on the PC and restore `rpmini/Image` on the ESP (or rewrite the dev image).
 

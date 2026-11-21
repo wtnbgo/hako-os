@@ -1,0 +1,55 @@
+#!/bin/sh
+# Install a kernel, its initrd and the board DTBs to the FAT boot partition (ESP)
+# and write the Boot Loader Specification entry that OpenABL boots.
+#
+#   rg55g1-update-esp [<kernel version>]     default: newest installed *-sm4450 kernel
+#
+# Called from /etc/kernel/postinst.d and /etc/initramfs/post-update.d.
+# Settings: /etc/default/rg55g1-esp
+set -e
+
+ESP=/boot/efi
+ENTRY=rg55g1
+TITLE="hako (Anbernic RG 55G1)"
+DTB=qcom/sm4450-anbernic-rg55g1.dtb
+DTB_GLOB="sm4450-*.dtb"
+CMDLINE="root=PARTLABEL=rootA rw rootwait console=tty0"
+[ -r /etc/default/rg55g1-esp ] && . /etc/default/rg55g1-esp
+
+ver=$1
+if [ -z "$ver" ]; then
+	ver=$(ls /boot/vmlinuz-*-sm4450 2>/dev/null | sed 's|^/boot/vmlinuz-||' | sort -V | tail -n1)
+fi
+case "$ver" in *-sm4450) ;; *) exit 0 ;; esac
+[ -f "/boot/vmlinuz-$ver" ] || { echo "rg55g1-update-esp: no /boot/vmlinuz-$ver" >&2; exit 0; }
+[ -d "$ESP" ] || { echo "rg55g1-update-esp: $ESP missing, skipped" >&2; exit 0; }
+
+dir=$ESP/$ENTRY
+mkdir -p "$dir" "$ESP/loader/entries" "$ESP/dtbs/qcom"
+
+# FAT has no atomic rename-over; copy to a temp name, then replace.
+install_file() { cp "$1" "$2.new" && sync && mv -f "$2.new" "$2"; }
+
+install_file "/boot/vmlinuz-$ver" "$dir/Image"
+initrd_line=
+if [ -f "/boot/initrd.img-$ver" ]; then
+	install_file "/boot/initrd.img-$ver" "$dir/initrd.img"
+	initrd_line="initrd     /$ENTRY/initrd.img"
+fi
+
+# DTBs: OpenABL's "Device model" menu lists the dtbs it finds in \dtbs\qcom
+for d in /usr/lib/linux-image-$ver/qcom/$DTB_GLOB; do
+	[ -f "$d" ] && install_file "$d" "$ESP/dtbs/qcom/$(basename "$d")"
+done
+
+{
+	echo "title      $TITLE"
+	echo "version    $ver"
+	echo "linux      /$ENTRY/Image"
+	[ -n "$initrd_line" ] && echo "$initrd_line"
+	echo "devicetree /dtbs/$DTB"
+	echo "options    $CMDLINE"
+} > "$ESP/loader/entries/$ENTRY.conf.new"
+mv -f "$ESP/loader/entries/$ENTRY.conf.new" "$ESP/loader/entries/$ENTRY.conf"
+sync
+echo "rg55g1-update-esp: $ver -> $ESP ($ENTRY)"

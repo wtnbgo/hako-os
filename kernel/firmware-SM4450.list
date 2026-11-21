@@ -1,0 +1,27 @@
+# Firmware built into the SM4450 kernel image (CONFIG_EXTRA_FIRMWARE).
+# <source> [<path in the image, if different>]
+#   plain path      file in linux-firmware.git at LINUX_FIRMWARE_TAG
+#   extra:<path>    file in ROCKNIX extra-firmware at EXTRA_FW_COMMIT (soc/SM4450.conf)
+# Set from ROCKNIX devices/SM4450/config/kernel-firmware.dat and the firmware-name
+# properties of sm4450-anbernic-rg55g1.dts.
+
+# Adreno 613 (SQE shared with a6xx gen1) + zap shader
+qcom/a630_sqe.fw
+extra:SM4450/qcom/sm4450/a613_zap.mbn qcom/sm4450/a613_zap.mbn
+
+# Wi-Fi: WCN3990 (ath10k snoc)
+ath10k/WCN3990/hw1.0/board-2.bin
+ath10k/WCN3990/hw1.0/firmware-5.bin
+ath10k/WCN3990/hw1.0/wlanmdsp.mbn
+
+# Bluetooth: WCN3950
+extra:SM4450/qca/cmbtfw13.tlv qca/cmbtfw13.tlv
+extra:SM4450/qca/cmnv13.bin qca/cmnv13.bin
+extra:SM4450/qca/cmnv13s.bin qca/cmnv13s.bin
+extra:SM4450/qca/cmnv13t.bin qca/cmnv13t.bin
+
+# Anbernic RG 55G1: audio DSP, Wi-Fi subsystem, amplifier tuning, AudioReach topology
+extra:SM4450/qcom/sm4450/RG55G1/adsp.mbn qcom/sm4450/RG55G1/adsp.mbn
+extra:SM4450/qcom/sm4450/RG55G1/wpss.mbn qcom/sm4450/RG55G1/wpss.mbn
+extra:SM4450/qcom/sm4450/RG55G1/aw88166_acf.bin qcom/sm4450/RG55G1/aw88166_acf.bin
+extra:SM4450/qcom/sm8450/AnbernicRG55G1-tplg.bin qcom/sm8450/AnbernicRG55G1-tplg.bin

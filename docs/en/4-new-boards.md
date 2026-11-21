@@ -39,7 +39,9 @@ Also note the ESP boot entries (`loader/entries/*.conf`) and the name of the dtb
 
 - `kernel/SOURCE.pin` and `kernel/build.sh` determine which upstream, patches and configuration are used ([kernel/README.md](../../kernel/README.md)).
 - For the same SoC, it is often enough to check that the new device's dtb is built and installed into `/usr/lib/linux-image-*/`.
-- For a different SoC, add a set of configuration and patches for `<device>` (put the device or SoC in the package name to keep them apart).
+- For a different SoC, add `kernel/soc/<SOC>.conf`, `kernel/firmware-<SOC>.list` and, if needed, `kernel/config/soc-<SOC>/`,
+  then build with `SOC=<SOC> kernel/build.sh`. The package name carries the SoC (`linux-image-<ver>-sm4450`).
+  [5-example-rg55g1.md](5-example-rg55g1.md) walks through this for SM4450.
 
 ### 3. Board package `<device>-bsp`
 
@@ -83,6 +85,8 @@ Fill in the table in "Hardware status" in [reference.md](reference.md) for the n
 | USB networking | `ssh root@192.168.7.2` |
 | Wi-Fi, Bluetooth | `iwctl`, `bluetoothctl` |
 | Boot time | `systemd-analyze` |
+
+A full worked example (research, preparation, arrival-day checklist) is [5-example-rg55g1.md](5-example-rg55g1.md).
 
 ## Asking an agent (examples)
 

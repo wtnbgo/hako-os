@@ -1,0 +1,27 @@
+#!/bin/sh
+# Anbernic RG 55G1: volume keys without PipeWire (called by /usr/lib/hako/volume):
+# volume up|down. Steps the speaker amplifiers (aw88166 "Left/Right PCM Playback
+# Volume") and the headphones (WCD937x HPH gain). Control names from ROCKNIX's
+# UCM for this device; TO CHECK on the device (amixer contents).
+case "$1" in
+up)   s=1 ;;
+down) s=-1 ;;
+*) echo "usage: $0 up|down" >&2; exit 2 ;;
+esac
+
+CARD=${HAKO_SND_CARD:-0}
+SPK_STEP=26; SPK_MIN=0; SPK_MAX=511   # Left/Right PCM Playback Volume
+HP_STEP=1;   HP_MIN=0;  HP_MAX=20     # HPHL/HPHR Volume
+
+get() { amixer -c "$CARD" cget "name=$1" 2>/dev/null | sed -n 's/^  : values=\([0-9]*\).*/\1/p'; }
+adj() { # name delta min max
+	cur=$(get "$1"); [ -n "$cur" ] || return 0
+	new=$((cur + $2))
+	[ "$new" -lt "$3" ] && new=$3
+	[ "$new" -gt "$4" ] && new=$4
+	amixer -q -c "$CARD" cset "name=$1" "$new"
+}
+adj "Left PCM Playback Volume" $((s * SPK_STEP)) $SPK_MIN $SPK_MAX
+adj "Right PCM Playback Volume" $((s * SPK_STEP)) $SPK_MIN $SPK_MAX
+adj "HPHL Volume" $((s * HP_STEP)) $HP_MIN $HP_MAX
+adj "HPHR Volume" $((s * HP_STEP)) $HP_MIN $HP_MAX

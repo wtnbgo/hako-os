@@ -1,0 +1,18 @@
+# USB-C network to the development PC. The PC gets 192.168.7.10-19 by DHCP.
+# No default route / DNS is offered, so the PC keeps using its own internet.
+[Match]
+Name=usb0
+
+[Network]
+Address=192.168.7.2/24
+DHCPServer=yes
+ConfigureWithoutCarrier=yes
+LinkLocalAddressing=no
+IPv6AcceptRA=no
+
+[DHCPServer]
+PoolOffset=10
+PoolSize=10
+EmitDNS=no
+EmitRouter=no
+EmitNTP=no

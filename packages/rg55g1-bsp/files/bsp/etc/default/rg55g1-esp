@@ -1,0 +1,6 @@
+# Settings for rg55g1-update-esp (boot entry written to the ESP for OpenABL)
+ESP=/boot/efi
+ENTRY=rg55g1
+TITLE="hako (Anbernic RG 55G1)"
+DTB=qcom/sm4450-anbernic-rg55g1.dtb
+CMDLINE="root=PARTLABEL=rootA rw rootwait console=tty0"
