@@ -62,13 +62,13 @@
 #define SET_X 140
 #define SET_W 1000
 #define SET_Y 120
-#define SET_H 80
+#define SET_H 72
 #define SET_TY ((SET_H - 10) / 2 - 21) /* text offset in a row */
 #define BAR_X (SET_X + 380)
 #define BAR_W 440
 
 enum { TAB_APPS, TAB_SETTINGS, TAB_COUNT };
-enum { S_VOLUME, S_BRIGHT, S_LANGUAGE, S_TIMEZONE, S_EXTAUDIO, S_BLUETOOTH, S_INFO, S_REBOOT, S_POWEROFF, S_COUNT };
+enum { S_VOLUME, S_BRIGHT, S_SCREENOFF, S_LANGUAGE, S_TIMEZONE, S_EXTAUDIO, S_BLUETOOTH, S_INFO, S_REBOOT, S_POWEROFF, S_COUNT };
 /* rows of the Bluetooth screen before the devices */
 enum { BT_ROW_POWER, BT_ROW_SCAN, BT_ROWS_FIXED };
 #define BT_VISIBLE 8
@@ -143,6 +143,7 @@ typedef struct {
 	int tab, sel_app, sel_set, top_row;
 	char tz[64];      /* current time zone */
 	bool ext_audio_device; /* external monitor audio stays on the device */
+	int screen_off_min;    /* hako-screen-idle timeout, 0 = never */
 	bool info;
 	bool bt_screen;       /* the Bluetooth screen is open */
 	BtState bt;
@@ -431,6 +432,44 @@ static void set_ext_audio(Launcher *l, bool device)
 	l->dirty = true;
 }
 
+/* "Screen off after": ~/.config/hako/screen-off = minutes (0 = never), read by
+ * hako-screen-idle (default 5 when the file is missing). */
+static const int SCREENOFF_MIN[] = { 0, 1, 3, 5, 10, 30 };
+#define SCREENOFF_COUNT ((int)SDL_arraysize(SCREENOFF_MIN))
+
+static void screenoff_load(Launcher *l)
+{
+	char path[600];
+	hako_config_path("screen-off", path, sizeof path, false);
+	FILE *f = fopen(path, "r");
+	int v = 5;
+	if (f) {
+		if (fscanf(f, "%d", &v) != 1 || v < 0)
+			v = 5;
+		fclose(f);
+	}
+	l->screen_off_min = v;
+}
+
+static void step_screenoff(Launcher *l, int dir)
+{
+	int i = 0;
+	while (i < SCREENOFF_COUNT && SCREENOFF_MIN[i] < l->screen_off_min)
+		i++;
+	i = (i + SCREENOFF_COUNT + dir) % SCREENOFF_COUNT;
+	char path[600];
+	hako_config_path("screen-off", path, sizeof path, true);
+	FILE *f = fopen(path, "w");
+	if (!f) {
+		SDL_Log("save %s: %s", path, strerror(errno));
+		return;
+	}
+	fprintf(f, "%d\n", SCREENOFF_MIN[i]);
+	fclose(f);
+	l->screen_off_min = SCREENOFF_MIN[i];
+	l->dirty = true;
+}
+
 static int tz_index(const char *tz)
 {
 	for (int i = 0; i < TZ_COUNT; i++)
@@ -459,6 +498,8 @@ static void settings_adjust(Launcher *l, int dir)
 		step_timezone(l, dir);
 	if (l->sel_set == S_EXTAUDIO)
 		set_ext_audio(l, !l->ext_audio_device);
+	if (l->sel_set == S_SCREENOFF)
+		step_screenoff(l, dir);
 	if (l->sel_set == S_VOLUME && s->volume >= 0) {
 		sys_set_volume(s, roundf((s->volume + dir * 0.05f) * 20) / 20);
 		beep();
@@ -479,6 +520,9 @@ static void settings_activate(Launcher *l)
 		break;
 	case S_EXTAUDIO:
 		set_ext_audio(l, !l->ext_audio_device);
+		break;
+	case S_SCREENOFF:
+		step_screenoff(l, 1);
 		break;
 	case S_BLUETOOTH:
 		l->bt_screen = true;
@@ -687,7 +731,7 @@ static void tap(Launcher *l, Screen *s, float x, float y)
 				beep();
 			} else if (i == S_BRIGHT && f >= -0.05f && f <= 1.05f && l->sys.bright_max)
 				sys_set_brightness(&l->sys, (int)(SDL_clamp(f, 0, 1) * l->sys.bright_max + 0.5f));
-			else if (i >= S_LANGUAGE)
+			else if (i != S_VOLUME && i != S_BRIGHT)
 				settings_activate(l);
 			return;
 		}
@@ -797,7 +841,7 @@ static void slider(float y, float v, const char *value)
 
 static void draw_settings(Launcher *l)
 {
-	static const TextId name[S_COUNT] = { T_S_VOLUME, T_S_BRIGHT, T_S_LANGUAGE, T_S_TIMEZONE,
+	static const TextId name[S_COUNT] = { T_S_VOLUME, T_S_BRIGHT, T_S_SCREENOFF, T_S_LANGUAGE, T_S_TIMEZONE,
 	                                      T_S_EXTAUDIO, T_S_BLUETOOTH, T_S_INFO, T_S_REBOOT, T_S_POWEROFF };
 	for (int i = 0; i < S_COUNT; i++) {
 		float y = SET_Y + i * SET_H;
@@ -822,6 +866,12 @@ static void draw_settings(Launcher *l)
 				snprintf(buf, sizeof buf, "%d%%", (int)roundf(f * 100));
 				slider(y, f, buf);
 			}
+		} else if (i == S_SCREENOFF) {
+			if (l->screen_off_min)
+				snprintf(buf, sizeof buf, T(T_MINUTES), l->screen_off_min);
+			else
+				snprintf(buf, sizeof buf, "%s", T(T_SCREENOFF_NEVER));
+			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_TEXT, ALIGN_RIGHT, 0, "‹  %s  ›", buf);
 		} else if (i == S_LANGUAGE)
 			ui_text(&ui, ui.mid, SET_X + SET_W - 30, y + SET_TY, C_TEXT, ALIGN_RIGHT, 0, "‹  %s  ›", lang_name(g_lang));
 		else if (i == S_TIMEZONE) {
@@ -1157,6 +1207,7 @@ int main(int argc, char **argv)
 	sys_timezone(l.tz, sizeof l.tz);
 	sys_apply_timezone(l.tz);
 	ext_audio_load(&l);
+	screenoff_load(&l);
 	bt_open();
 	Screen s;
 	if (!screen_open(&s, rot))

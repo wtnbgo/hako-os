@@ -1,0 +1,12 @@
+[Unit]
+Description=hako: turn the panel backlight off when idle
+# after systemd-backlight has restored the brightness
+After=systemd-udevd.service systemd-backlight.target
+
+[Service]
+ExecStart=/usr/lib/hako/screen-idle
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

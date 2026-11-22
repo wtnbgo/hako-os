@@ -1,3 +1,13 @@
+hako-launcher (0.4.0) trixie; urgency=medium
+
+  * hako-screen-idle: turns the panel backlight off when no input device
+    (pads, buttons, touch, keyboards) has been used for a while, and back on
+    at the next input, which is kept from the app. Settings: "Screen off"
+    (never / 1 / 3 / 5 / 10 / 30 minutes, default 5).
+  * Settings rows a little lower again for the new item.
+
+ -- hako-os <hako@hako-os>  Sun, 22 Nov 2026 19:30:00 +0900
+
 hako-launcher (0.3.0) trixie; urgency=medium
 
   * Settings: Bluetooth screen. Switch the adapter on and off, search for
