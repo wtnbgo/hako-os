@@ -74,6 +74,14 @@ bash scripts/build-image.sh dev        # → out/images/dev/rpmini-dev.img (7GiB
 | Volume - | OpenABL menu |
 | Volume + | Built-in Android |
 
+| Power key after boot | Result |
+|---|---|
+| Short press | Suspend (press again to wake) |
+| Hold 5 seconds | Power off (also in the launcher settings) |
+
+> Suspend is only a stopgap and does not save much battery (the SoC does not reach its deep power state; see chapter 4 of the reference).
+> Power off to keep the battery. The screen turns off by itself after a while without input ("Screen off after" in the settings).
+
 ## Reverting
 
 - Android temporarily: Volume + at boot.

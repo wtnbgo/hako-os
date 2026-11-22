@@ -159,8 +159,9 @@ The old names (rpmini-session / rpmini-dev / rpmini-launcher / rpmini-sdl-hello)
 - **Power key**: a short press suspends (s2idle) and the next press wakes the device; holding it for 5 seconds powers off.
   `hako-screen-idle` handles the short press and ignores the press that wakes the system (logind would see it right after
   the resume); logind handles only the long press (`/usr/lib/systemd/logind.conf.d/50-hako-power-key.conf`).
-  While the screen is off from idling, a press only turns it on. Suspend does not reach the SoC's deepest power state yet
-  (the CPU cluster rarely powers down); the CPUs and apps are stopped, so it still uses less than an idle screen.
+  While the screen is off from idling, a press only turns it on.
+  **Suspend is only a stopgap: to keep the battery, power off.** It stops the CPUs and apps, but the SoC never reaches
+  its deep power state (see "Suspend" in the table in chapter 4).
 - Settings tab: volume (a test sound plays when changed), screen brightness (logind's `SetBrightness`), screen off after (`~/.config/hako/screen-off`, minutes, 0 = never; read by `hako-screen-idle.service`, which watches every input device as root, switches the panel backlight off with `bl_power` and grabs the input devices while it is off, so the input that wakes the screen, the power key included, reaches nobody else), language, time zone (systemd-timedated), external monitor audio (`~/.config/hako/external-audio`, applied by `/usr/lib/hako/audio-route`), Bluetooth (its own screen: on/off, search, pair and connect, disconnect, X to forget; talks to BlueZ over D-Bus and has its own pairing agent),
   system info, reboot, power off (power and time zone are allowed for user `hako` via the polkit rule `50-hako-launcher.rules`).
   The time zone is passed to started apps via `TZ`.
@@ -241,6 +242,7 @@ The app appears about 6.5 seconds after power-on (kernel 2.1 s + userspace 1.8 s
 | External monitor (USB-C DisplayPort Alt Mode) | Works | Plugged in while running, the screen moves to the monitor (cage `-m last`, `HAKO_CAGE_MODE`). The built-in panel goes dark; 4:3 apps are scaled to the centre, raylib and similar use the whole 16:9. The monitor's touch (USB) and the built-in touch both map to the whole monitor. Sound moves to the monitor too (the launcher setting "External monitor audio" can keep it on the device). The DSP does not answer the first start of DP audio, so a moment of silence is played right after the switch (`/usr/lib/hako/hw/display-audio-prime`). (The earlier stall when the session stopped after unplugging the monitor came from the terminal reset of the USB serial getty; fixed in hako-dev 0.2.11) |
 | Headset microphone (4-pole headphone jack) | Works | Plugging in sets `Headphone Jack` / `Mic Jack` and the input switches to "Headphone Microphone" (UCM Headset, ADC2, `hw:0,2`). Records at 48 kHz; normal speech averages about -20 dBFS. The built-in microphone is not supported (next row) |
 | Built-in microphone (hole at the top left) | Not supported | Android (`mixer_paths_qrd.xml`) uses `codec_dmic3` (WCD938x DMIC3 → `SWR_DMIC2` → TX DEC0). In our device tree the WCD938x DMICs have no DAPM input path, so recording fails with an I/O error. Adding the path with `widgets` and `audio-routing` makes data flow, but none of DMIC1-8 carried sound. Android also configures LPASS DMIC pins (`dmic01`, `dmic45`); the mic may be wired there |
+| Suspend | Works, shallow only | s2idle (the only mode). Power key short press; screen, touch, pad, sound, Wi-Fi and USB come back. The SoC never powers down as a whole (CX collapse, `/sys/kernel/debug/qcom_stats/cxsd` stays 0, also without USB and Wi-Fi): mainline sm8250 has no deep cluster idle state since 2022 ([dts patch](https://lore.kernel.org/lkml/CAMi1Hd2Qh-AO8JjwzwqYaQF3kyfC6R3K2t6jy3r2sSApTmwGGw@mail.gmail.com/T/), waiting for rpmh-rsc / cluster PM domain work). ROCKNIX uses the same kernel and also only s2idle (it stops Wi-Fi, Bluetooth and the LEDs and sets powersave governors around it). So suspend saves little; power off to keep the battery. Revisit when mainline brings the deep state back |
 | Bluetooth | Works (gamepads, headphones) | QCA6390 (`hci0`), BlueZ 5.82 (a dependency since hako-session 0.2.13). A Switch Pro Controller pairs and works with the printed labels through the kernel's `hid-nintendo`. A new Xbox controller (nano, `045e:0b4f`) pairs, but its input notifications cannot be enabled, so it does not work. Headphones (Beats Solo 4) appear as a PipeWire output when connected, become the default output, and play over A2DP (SBC). Pairing is done in the launcher under Settings → Bluetooth (from ssh: steps below) |
 
 ## 5. Common operations
@@ -509,6 +511,7 @@ small (neither krkrz nor Siv3D has a rotation mechanism).
   - Bluetooth: firmware loading, pairing (controllers and earphones), audio output.
   - External monitor (USB-C DisplayPort Alt Mode): a real fix for the DSP not answering the first DP audio start; the first `typec_displayport` probe fails with `-71` (not yet host) and binds a little later.
 
+- Deep suspend: when mainline sm8250 gets its deep cluster idle state back (see "Suspend" in chapter 4), try it.
 - A mechanism to version each app build automatically (since apt does not reinstall the same version).
 - Release image: read-only root, A/B slots, rollback based on a boot counter, an update mechanism (our own script at first, later RAUC).
 - Moving to the internal UFS (erase Android and write a GPT image to userdata; note that sectors are 4096 bytes).
