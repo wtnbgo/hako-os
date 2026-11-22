@@ -1,3 +1,11 @@
+hako-launcher (0.4.1) trixie; urgency=medium
+
+  * Power key: a short press suspends (s2idle), handled by hako-screen-idle,
+    which ignores the press that wakes the system; holding it for 5 seconds
+    powers off (logind). While the screen is off a press only wakes it.
+
+ -- hako-os <hako@hako-os>  Sun, 22 Nov 2026 20:10:00 +0900
+
 hako-launcher (0.4.0) trixie; urgency=medium
 
   * hako-screen-idle: turns the panel backlight off when no input device

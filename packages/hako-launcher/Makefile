@@ -18,6 +18,7 @@ screen-idle: src/screen-idle.c
 install: hako-launcher screen-idle
 	install -D -m 0755 hako-launcher $(DESTDIR)$(PREFIX)/bin/hako-launcher
 	install -D -m 0755 screen-idle $(DESTDIR)$(PREFIX)/lib/hako/screen-idle
+	install -D -m 0644 data/50-hako-power-key.conf $(DESTDIR)$(PREFIX)/lib/systemd/logind.conf.d/50-hako-power-key.conf
 	install -D -m 0755 data/home-button $(DESTDIR)$(PREFIX)/lib/hako/home-button
 	install -D -m 0755 data/launch-app $(DESTDIR)$(PREFIX)/lib/hako/launch-app
 	install -D -m 0644 data/hako-home.conf $(DESTDIR)/etc/triggerhappy/triggers.d/hako-home.conf

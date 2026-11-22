@@ -11,6 +11,8 @@
  * input that wakes the screen does not reach the app, logind (power key) or
  * triggerhappy (volume keys).
  *
+ * It also turns a short press of the power key into a suspend (see power_key).
+ *
  * Timeout: minutes in ~hako/.config/hako/screen-off (written by the launcher's
  * settings), 0 = never. Missing file: 5 minutes. Re-read when it changes.
  * The backlight is switched with bl_power, so its brightness is left alone.
@@ -29,6 +31,7 @@
 #include <string.h>
 #include <sys/inotify.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -195,12 +198,59 @@ static void scan_devs(void)
 	closedir(d);
 }
 
+/* Power key, short press (< 1 s) while the screen is on: suspend. A press
+ * that wakes the screen does nothing else, and the press that wakes the
+ * system from suspend reaches us right after the resume: ignore the key for
+ * a moment then. logind only handles the long press (hako-power-key.conf). */
+static double power_down_at;   /* 0: no press to act on */
+static double ignore_power_until;
+
+static double sleep_offset(void)  /* grows by the time spent suspended */
+{
+	struct timespec b, m;
+	clock_gettime(CLOCK_BOOTTIME, &b);
+	clock_gettime(CLOCK_MONOTONIC, &m);
+	return (b.tv_sec - m.tv_sec) + (b.tv_nsec - m.tv_nsec) / 1e9;
+}
+
+static void suspend_now(void)
+{
+	fprintf(stderr, "screen-idle: power key: suspend\n");
+	pid_t pid = fork();
+	if (pid == 0) {
+		execl("/usr/bin/systemctl", "systemctl", "--no-block", "suspend", (char *)NULL);
+		_exit(127);
+	}
+	if (pid > 0)
+		waitpid(pid, NULL, 0);
+}
+
+static void power_key(int value, bool was_blanked)
+{
+	double t = now();
+	if (t < ignore_power_until || was_blanked) {
+		power_down_at = 0;
+		return;
+	}
+	if (value == 1)
+		power_down_at = t;
+	else if (value == 0 && power_down_at) {
+		bool short_press = t - power_down_at < 1.0;
+		power_down_at = 0;
+		if (short_press) {
+			ignore_power_until = t + 2;
+			suspend_now();
+		}
+	}
+}
+
 /* drain a device; true if any event counts as activity */
 static bool read_dev(int i)
 {
 	Dev *d = &devs[i];
 	struct input_event ev[64];
 	bool act = false;
+	bool was_blanked = blanked;
 	for (;;) {
 		ssize_t n = read(d->fd, ev, sizeof ev);
 		if (n < 0) {
@@ -210,6 +260,8 @@ static bool read_dev(int i)
 		}
 		for (size_t k = 0; k < n / sizeof ev[0]; k++) {
 			struct input_event *e = &ev[k];
+			if (e->type == EV_KEY && e->code == KEY_POWER && e->value != 2)
+				power_key(e->value, was_blanked);
 			if (e->type == EV_KEY && e->value == 1)
 				act = true;
 			else if (e->type == EV_REL)
@@ -244,7 +296,7 @@ int main(void)
 	scan_devs();
 	backlight(true);  /* in case an earlier run died while the screen was off */
 
-	double last = now();
+	double last = now(), slept = sleep_offset();
 	while (!quit) {
 		load_config();
 		double idle = now() - last;
@@ -269,6 +321,14 @@ int main(void)
 				continue;
 			break;
 		}
+		double off = sleep_offset();
+		if (off - slept > 1) {  /* back from suspend (whoever started it) */
+			fprintf(stderr, "screen-idle: resumed after %.0f s\n", off - slept);
+			ignore_power_until = now() + 2;
+			power_down_at = 0;
+			last = now();
+		}
+		slept = off;
 		if (p[0].revents & POLLIN) {
 			char buf[4096];
 			while (read(ino, buf, sizeof buf) > 0)

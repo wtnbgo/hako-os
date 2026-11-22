@@ -3,9 +3,10 @@ set -e
 if [ "$1" = configure ]; then
 	# above the sample apps (hako-sdl-hello: 10): the session starts the launcher
 	update-alternatives --install /usr/bin/hako-app hako-app /usr/bin/hako-launcher 50
-	# pick up the HOME button trigger
+	# pick up the HOME button trigger, and the power key settings
 	if [ -d /run/systemd/system ]; then
 		deb-systemd-invoke try-restart triggerhappy.service >/dev/null 2>&1 || true
+		systemctl kill -s HUP systemd-logind.service >/dev/null 2>&1 || true
 	fi
 fi
 #DEBHELPER#

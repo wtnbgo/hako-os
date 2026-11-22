@@ -156,6 +156,11 @@ The old names (rpmini-session / rpmini-dev / rpmini-launcher / rpmini-sdl-hello)
   When the app exits, it returns to the list (an error exit or crash shows a message).
 - **Long-press the HOME button (1 second)** to terminate the running app and return. triggerhappy (`/etc/triggerhappy/triggers.d/hako-home.conf`)
   calls `/usr/lib/hako/home-button`, which sends SIGUSR1 to the launcher. The launcher sends SIGTERM to the app's process group, then SIGKILL after 3 seconds.
+- **Power key**: a short press suspends (s2idle) and the next press wakes the device; holding it for 5 seconds powers off.
+  `hako-screen-idle` handles the short press and ignores the press that wakes the system (logind would see it right after
+  the resume); logind handles only the long press (`/usr/lib/systemd/logind.conf.d/50-hako-power-key.conf`).
+  While the screen is off from idling, a press only turns it on. Suspend does not reach the SoC's deepest power state yet
+  (the CPU cluster rarely powers down); the CPUs and apps are stopped, so it still uses less than an idle screen.
 - Settings tab: volume (a test sound plays when changed), screen brightness (logind's `SetBrightness`), screen off after (`~/.config/hako/screen-off`, minutes, 0 = never; read by `hako-screen-idle.service`, which watches every input device as root, switches the panel backlight off with `bl_power` and grabs the input devices while it is off, so the input that wakes the screen, the power key included, reaches nobody else), language, time zone (systemd-timedated), external monitor audio (`~/.config/hako/external-audio`, applied by `/usr/lib/hako/audio-route`), Bluetooth (its own screen: on/off, search, pair and connect, disconnect, X to forget; talks to BlueZ over D-Bus and has its own pairing agent),
   system info, reboot, power off (power and time zone are allowed for user `hako` via the polkit rule `50-hako-launcher.rules`).
   The time zone is passed to started apps via `TZ`.
