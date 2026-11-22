@@ -1,0 +1,38 @@
+# hako boot splash (Plymouth script module).
+# Logo in the middle, three dots below it that pulse one after another.
+# Images: logo.png, dot.png (packages/hako-base/splash/make-images.py).
+# Plymouth turns the picture to match the panel orientation of the display.
+
+Window.SetBackgroundTopColor(0.078, 0.086, 0.110);     # 0x14161c, as the launcher
+Window.SetBackgroundBottomColor(0.078, 0.086, 0.110);
+
+logo_image = Image("logo.png");
+logo = Sprite(logo_image);
+dot_image = Image("dot.png");
+for (i = 0; i < 3; i++)
+  dots[i] = Sprite(dot_image);
+
+fun layout() {
+  x = Window.GetX();
+  y = Window.GetY();
+  w = Window.GetWidth();
+  h = Window.GetHeight();
+  logo.SetX(x + w / 2 - logo_image.GetWidth() / 2);
+  logo.SetY(y + h / 2 - logo_image.GetHeight() / 2 - 30);
+  for (i = 0; i < 3; i++) {
+    dots[i].SetX(x + w / 2 - 37 + i * 30);
+    dots[i].SetY(y + h / 2 + logo_image.GetHeight() / 2 + 40);
+  }
+}
+layout();
+
+tick = 0;
+fun refresh() {
+  tick++;
+  for (i = 0; i < 3; i++) {
+    s = Math.Sin(tick * 0.08 - i * 0.9);
+    if (s < 0) s = 0;
+    dots[i].SetOpacity(0.25 + 0.75 * s);
+  }
+}
+Plymouth.SetRefreshFunction(refresh);

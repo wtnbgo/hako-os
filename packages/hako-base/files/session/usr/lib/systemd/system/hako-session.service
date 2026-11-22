@@ -2,6 +2,10 @@
 Description=hako game session (full screen app on tty1)
 Documentation=file:/usr/lib/hako/session-run
 After=systemd-user-sessions.service systemd-logind.service getty@tty1.service
+# Take over from the boot splash: stop Plymouth but leave its last picture on
+# the screen until cage draws (before plymouth-quit, which would clear it).
+After=plymouth-start.service
+Before=plymouth-quit.service plymouth-quit-wait.service
 Conflicts=getty@tty1.service
 StartLimitIntervalSec=60
 StartLimitBurst=10
@@ -14,7 +18,9 @@ WorkingDirectory=~
 # user (uaccess) and sets XDG_RUNTIME_DIR.
 PAMName=login
 TTYPath=/dev/tty1
-TTYReset=yes
+# no reset: it would switch tty1 back to text mode and show the console
+# between the splash and cage's first frame
+TTYReset=no
 TTYVHangup=yes
 TTYVTDisallocate=yes
 StandardInput=tty-fail
@@ -22,6 +28,8 @@ StandardOutput=journal
 StandardError=journal
 UtmpIdentifier=tty1
 UtmpMode=user
+# as root ("+"); fails harmlessly when Plymouth is not running ("-")
+ExecStartPre=-+/usr/bin/plymouth quit --retain-splash
 ExecStart=/usr/lib/hako/session-run
 Restart=always
 RestartSec=1

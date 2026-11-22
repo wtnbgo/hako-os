@@ -1,3 +1,16 @@
+rpmini-bsp (0.2.6) trixie; urgency=medium
+
+  * No penguin logo, no cursor and no kernel warnings on the screen before
+    the splash (loglevel=3 logo.nologo vt.global_cursor_default=0).
+
+ -- hako-os <hako@hako-os>  Sun, 22 Nov 2026 21:30:00 +0900
+
+rpmini-bsp (0.2.5) trixie; urgency=medium
+
+  * Boot quietly with the splash ("quiet splash" on the kernel command line).
+
+ -- hako-os <hako@hako-os>  Sun, 22 Nov 2026 21:00:00 +0900
+
 rpmini-bsp (0.2.4) trixie; urgency=medium
 
   * display-audio-prime: play 0.5 s of silence through PipeWire instead of

@@ -3,5 +3,11 @@ set -e
 if [ "$1" = configure ]; then
 	systemd-sysusers hako.conf
 	systemd-tmpfiles --create hako.conf || true
+	# boot splash: the theme lives in the initramfs too, so rebuild it
+	# (also when only the theme's images changed)
+	if command -v plymouth-set-default-theme >/dev/null; then
+		[ "$(plymouth-set-default-theme)" = hako ] || plymouth-set-default-theme hako
+		dpkg-trigger --no-await update-initramfs || update-initramfs -u
+	fi
 fi
 #DEBHELPER#

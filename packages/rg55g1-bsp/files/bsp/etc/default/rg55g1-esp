@@ -3,4 +3,4 @@ ESP=/boot/efi
 ENTRY=rg55g1
 TITLE="hako (Anbernic RG 55G1)"
 DTB=qcom/sm4450-anbernic-rg55g1.dtb
-CMDLINE="root=PARTLABEL=rootA rw rootwait console=tty0"
+CMDLINE="root=PARTLABEL=rootA rw rootwait console=tty0 quiet splash loglevel=3 logo.nologo vt.global_cursor_default=0"

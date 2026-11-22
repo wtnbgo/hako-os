@@ -103,6 +103,7 @@ Status as of 2026-11-20.
 | Contents | Role |
 |---|---|
 | `hako-session.service` | Starts `session-run` on tty1 as the regular user `hako`. Restarts 1 second after exit (up to 10 times in 60 seconds). Mutually exclusive with the getty on tty1 |
+| Boot splash | Plymouth theme `hako` (`/usr/share/plymouth/themes/hako/`, images from `packages/hako-base/splash/make-images.py`), also in the initramfs (the hako-session postinst selects it and rebuilds the initramfs). Kernel options from the bsp: `quiet splash loglevel=3 logo.nologo vt.global_cursor_default=0`. hako-session runs `plymouth quit --retain-splash` before plymouth-quit and keeps `TTYReset=no` (a reset puts tty1 back into text mode), so no console shows between the splash and the launcher. Logs: `journalctl -b`; to see them on the screen, remove `quiet splash` from `CMDLINE` in `/etc/default/<board>-esp` and run `<board>-update-esp` |
 | `/usr/lib/hako/session-run` | Loads the environment settings and starts the app inside cage (if `HAKO_COMPOSITOR` is empty, `exec`s it directly) |
 | `/usr/lib/hako/session-app` | Inside cage, rotates the output with `wlr-randr` and starts the app with `SDL_VIDEO_DRIVER=wayland` |
 | Environment settings | Loaded in order: `/usr/lib/hako/session.d/*.sh` (device defaults, installed by the bsp) → `/etc/default/hako-session` (`HAKO_COMPOSITOR=cage`, `SIV3D_FULLSCREEN`, `HAKO_APP`, `HAKO_APP_ARGS`, etc.) → `/etc/hako/session.d/*.sh` (additions) |

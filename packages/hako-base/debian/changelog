@@ -1,3 +1,19 @@
+hako-base (0.2.15) trixie; urgency=medium
+
+  * hako-session.service: TTYReset=no. The reset put tty1 back into text
+    mode, so the console showed for a moment between the splash and the
+    launcher.
+
+ -- hako-os <hako@hako-os>  Sun, 22 Nov 2026 21:20:00 +0900
+
+hako-base (0.2.14) trixie; urgency=medium
+
+  * hako-session: boot splash (Plymouth theme "hako": logo and pulsing dots,
+    turned to the panel orientation). The session takes over from it with
+    "plymouth quit --retain-splash", so no console shows in between.
+
+ -- hako-os <hako@hako-os>  Sun, 22 Nov 2026 21:00:00 +0900
+
 hako-base (0.2.13) trixie; urgency=medium
 
   * hako-session: really add bluez and libspa-0.2-bluetooth to Depends

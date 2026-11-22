@@ -32,6 +32,7 @@ Depends: ${misc:Depends},
  pipewire-alsa,
  cage,
  wlr-randr,
+ plymouth,
  triggerhappy,
  bluez,
  libspa-0.2-bluetooth

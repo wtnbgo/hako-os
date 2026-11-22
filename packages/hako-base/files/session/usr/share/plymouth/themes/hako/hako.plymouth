@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=hako
+Description=hako boot splash: logo and three pulsing dots
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/hako
+ScriptFile=/usr/share/plymouth/themes/hako/hako.script
