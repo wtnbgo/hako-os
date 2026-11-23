@@ -1,3 +1,12 @@
+rg55g1-bsp (0.1.5) trixie; urgency=medium
+
+  * Pad: Nintendo (Switch) face-button labels, as printed on the RG 55G1,
+    and an explicit mapping (the pad reports left = BTN_NORTH and
+    top = BTN_WEST). The two buttons below the screen are guide (left) and
+    misc1 (right).
+
+ -- hako-os <hako@hako-os>  Mon, 23 Nov 2026 19:50:00 +0900
+
 rg55g1-bsp (0.1.4) trixie; urgency=medium
 
   * Session: software rendering (WLR_RENDERER=pixman, SDL_RENDER_DRIVER=
