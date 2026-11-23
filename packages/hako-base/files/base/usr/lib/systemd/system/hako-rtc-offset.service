@@ -1,0 +1,18 @@
+[Unit]
+Description=hako: restore the clock from the RTC and a saved offset
+Documentation=file:/usr/lib/hako/rtc-offset
+DefaultDependencies=no
+RequiresMountsFor=/var/lib/hako
+After=local-fs.target
+Before=sysinit.target time-set.target systemd-timesyncd.service shutdown.target
+Wants=time-set.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/hako/rtc-offset restore
+ExecStop=/usr/lib/hako/rtc-offset save
+
+[Install]
+WantedBy=sysinit.target

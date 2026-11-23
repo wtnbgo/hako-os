@@ -6,11 +6,15 @@ override_dh_installsystemd:
 	dh_installsystemd -phako-session hako-session.service
 	# runs on the next boot (first boot of an image), not while installing
 	dh_installsystemd -phako-base --no-start hako-grow-data.service
+	dh_installsystemd -phako-base --no-start hako-rtc-offset.service
+	dh_installsystemd -phako-base hako-rtc-offset-save.timer hako-rtc-offset-save.path
+	dh_installsystemd -phako-base --no-enable --no-start hako-rtc-offset-save.service
 
 override_dh_fixperms:
 	dh_fixperms
 	chmod 0755 \
 		debian/hako-base/usr/lib/hako/grow-data \
+		debian/hako-base/usr/lib/hako/rtc-offset \
 		debian/hako-session/usr/lib/hako/session-run \
 		debian/hako-session/usr/lib/hako/session-app \
 		debian/hako-session/usr/lib/hako/volume \

@@ -1,0 +1,8 @@
+[Unit]
+Description=hako: save the clock / RTC offset after an NTP sync
+
+[Path]
+PathChanged=/run/systemd/timesync/synchronized
+
+[Install]
+WantedBy=multi-user.target

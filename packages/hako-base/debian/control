@@ -13,12 +13,16 @@ Depends: ${misc:Depends},
  util-linux,
  gdisk,
  cloud-guest-utils,
- e2fsprogs
+ e2fsprogs,
+ systemd-timesyncd
 Description: hako base system
  System parts of hako that do not depend on the board or the session:
   - on the first boot, grow the data partition (file system label "data")
     to the end of the disk (hako-grow-data.service), so a small image can be
     written to any bigger card
+  - keep the wall clock across reboots on boards whose RTC cannot be set
+    (Qualcomm PMIC RTC): the offset to the RTC is saved after an NTP sync,
+    every hour and at shutdown, and applied early at boot (hako-rtc-offset)
 
 Package: hako-session
 Architecture: all

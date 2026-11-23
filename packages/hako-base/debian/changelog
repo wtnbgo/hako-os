@@ -1,3 +1,13 @@
+hako-base (0.2.16) trixie; urgency=medium
+
+  * hako-base: keep the clock across reboots on boards whose RTC Linux cannot
+    set (Qualcomm PMIC RTC, e.g. the RG 55G1, which came up in April 2026):
+    hako-rtc-offset saves "clock - RTC" (after an NTP sync, hourly, at
+    shutdown) and applies it early at boot. Depends on systemd-timesyncd so
+    the clock is set from NTP when the network is up.
+
+ -- hako-os <hako@hako-os>  Mon, 23 Nov 2026 21:40:00 +0900
+
 hako-base (0.2.15) trixie; urgency=medium
 
   * hako-session.service: TTYReset=no. The reset put tty1 back into text

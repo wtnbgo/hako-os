@@ -1,0 +1,42 @@
+#!/bin/sh
+# Keep the wall clock across reboots on boards whose RTC cannot be set.
+#
+#   rtc-offset restore   set the system clock to RTC + saved offset (early boot)
+#   rtc-offset save      save offset = system clock - RTC
+#
+# The Qualcomm PMIC RTC (rtc-pm8xxx) keeps counting while the device is off,
+# but Linux may not set it (Android keeps its own offset), so it reads
+# "seconds since the PMIC started" (1970-01-01 plus a few hours). The offset
+# file turns that into the real time. Once the clock has been set (NTP via
+# systemd-timesyncd, timedatectl, date, or the PC with dev-update.sh), "save"
+# records the offset; it runs after an NTP sync, every hour and at shutdown.
+# Boards with a working RTC are left alone (RTC later than 2020).
+RTC=/sys/class/rtc/rtc0/since_epoch
+STATE=/var/lib/hako/rtc-offset
+MIN=1577836800   # 2020-01-01: a clock before this has never been set
+
+[ -r "$RTC" ] || exit 0
+rtc=$(cat "$RTC") || exit 0
+now=$(date +%s)
+
+case "$1" in
+restore)
+	[ "$rtc" -ge "$MIN" ] && exit 0          # the RTC itself keeps the time
+	[ -r "$STATE" ] || exit 0
+	off=$(cat "$STATE")
+	case "$off" in ''|*[!0-9-]*) exit 0 ;; esac
+	t=$((rtc + off))
+	[ "$t" -ge "$MIN" ] || exit 0
+	date -u -s "@$t" >/dev/null && echo "rtc-offset: clock set to $(date -u -d "@$t" '+%F %T') UTC"
+	;;
+save)
+	[ "$rtc" -ge "$MIN" ] && exit 0
+	[ "$now" -ge "$MIN" ] || exit 0          # the clock was never set
+	mkdir -p "${STATE%/*}"
+	echo $((now - rtc)) > "$STATE.new" && mv -f "$STATE.new" "$STATE"
+	;;
+*)
+	echo "usage: $0 restore|save" >&2
+	exit 2
+	;;
+esac

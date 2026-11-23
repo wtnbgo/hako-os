@@ -14,7 +14,10 @@
 # so new Debian dependencies install even without Wi-Fi on the device.
 # The apt source for the tunnel is written on the device for the duration of
 # the run only (it is unreachable otherwise).
-# Device: HAKO_DEV (default root@192.168.7.2).
+# Device: HAKO_DEV (default root@192.168.7.2); extra ssh options: HAKO_SSH_OPTS
+# (e.g. "-o HostKeyAlias=rg55g1" when several boards share 192.168.7.2).
+# The device clock is set from the PC first (boards whose RTC Linux cannot set
+# come up with an old date, and apt refuses Release files "from the future").
 set -euo pipefail
 TOP=$(cd "$(dirname "$0")/.." && pwd)
 DEV=${HAKO_DEV:-root@192.168.7.2}
@@ -54,8 +57,12 @@ else
 fi
 
 echo "== $DEV: $act"
-ssh -o ExitOnForwardFailure=yes -R "$PORT:127.0.0.1:$PORT" -R "$SOCKS" "$DEV" \
+# shellcheck disable=SC2086
+ssh ${HAKO_SSH_OPTS:-} -o ExitOnForwardFailure=yes -R "$PORT:127.0.0.1:$PORT" -R "$SOCKS" "$DEV" \
 	"set -e; export DEBIAN_FRONTEND=noninteractive
+	now=$(date -u +%s); d=\$((\$(date -u +%s) - now)); d=\${d#-}
+	if [ \$d -gt 60 ]; then date -u -s @$(date -u +%s) >/dev/null; echo \"clock set from the PC (was off by \$d s)\"
+		[ -x /usr/lib/hako/rtc-offset ] && /usr/lib/hako/rtc-offset save || true; fi
 	L=/etc/apt/sources.list.d/hako-dev-tunnel.list
 	echo 'deb [trusted=yes] http://127.0.0.1:$PORT trixie main' > \$L
 	trap 'rm -f \$L' EXIT

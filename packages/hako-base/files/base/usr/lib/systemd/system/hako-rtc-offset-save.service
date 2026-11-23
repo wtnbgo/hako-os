@@ -1,0 +1,7 @@
+[Unit]
+Description=hako: save the offset between the clock and the RTC
+Documentation=file:/usr/lib/hako/rtc-offset
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/hako/rtc-offset save
