@@ -3,7 +3,7 @@
 
 # The panel is portrait (1080x1920) and mounted like the Retroid Pocket Mini's
 # (device tree rotation = <90>), so the same 270 gives a landscape output.
-# TO CHECK on the device; changing it also needs the touch matrix in
+# Checked on the device; changing it also needs the touch matrix in
 # /usr/lib/udev/rules.d/72-rg55g1-touch-rotate.rules.
 HAKO_ROTATE=270
 

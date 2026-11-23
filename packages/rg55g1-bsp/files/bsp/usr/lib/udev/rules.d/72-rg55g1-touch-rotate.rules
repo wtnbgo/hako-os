@@ -6,5 +6,5 @@
 #    90: "0 -1 1 1 0 0"
 #   180: "-1 0 1 0 -1 1"
 # Only the built-in panel (FocalTech on I2C); USB touch monitors keep their own
-# orientation. TO CHECK on the device (the ID_PATH of the panel).
+# orientation. Checked on the device (panel at platform-984000.i2c).
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_TOUCHSCREEN}=="1", ENV{ID_BUS}!="usb", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"

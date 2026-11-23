@@ -1,0 +1,5 @@
+# Keep the WCD937x SoundWire RX/TX slaves out of runtime suspend: while they
+# sleep the headphone jack (MBHC) is detected late or not at all, and a plug
+# is taken for a line out (impedance detect ramp error). Same as the WCD938x
+# rule of the Retroid Pocket Mini.
+ACTION=="bind", SUBSYSTEM=="soundwire", KERNEL=="sdw:*:0217:010a:*", ATTR{power/control}="on"

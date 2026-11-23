@@ -1,3 +1,14 @@
+rg55g1-bsp (0.1.6) trixie; urgency=medium
+
+  * Keep the WCD937x SoundWire slaves awake (udev rule), so plugging in
+    headphones is detected, as on the Retroid Pocket Mini. Not enough on
+    its own: the jack is still taken for a line out ("Impedance detect
+    ramp error") and the output stays on the speaker (known issue).
+  * Screen rotation, touch matrix and the volume fallback mixer names
+    checked on the device.
+
+ -- hako-os <hako@hako-os>  Mon, 23 Nov 2026 20:30:00 +0900
+
 rg55g1-bsp (0.1.5) trixie; urgency=medium
 
   * Pad: Nintendo (Switch) face-button labels, as printed on the RG 55G1,

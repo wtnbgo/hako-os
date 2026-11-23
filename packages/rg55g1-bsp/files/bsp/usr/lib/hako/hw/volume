@@ -2,7 +2,7 @@
 # Anbernic RG 55G1: volume keys without PipeWire (called by /usr/lib/hako/volume):
 # volume up|down. Steps the speaker amplifiers (aw88166 "Left/Right PCM Playback
 # Volume") and the headphones (WCD937x HPH gain). Control names from ROCKNIX's
-# UCM for this device; TO CHECK on the device (amixer contents).
+# UCM for this device; the controls exist on the device (amixer controls).
 case "$1" in
 up)   s=1 ;;
 down) s=-1 ;;
