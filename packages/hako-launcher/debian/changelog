@@ -1,3 +1,11 @@
+hako-launcher (0.4.2) trixie; urgency=medium
+
+  * Battery: show "full" once the charger reports Full. The fuel gauge keeps
+    saying "Charging" at 100 % after charging ends, because the pm8150b
+    charger sends no change notice on termination.
+
+ -- hako-os <hako@hako-os>  Mon, 23 Nov 2026 00:40:00 +0900
+
 hako-launcher (0.4.1) trixie; urgency=medium
 
   * Power key: a short press suspends (s2idle), handled by hako-screen-idle,

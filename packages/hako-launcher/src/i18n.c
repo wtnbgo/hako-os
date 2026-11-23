@@ -124,6 +124,7 @@ static const char *TEXT[T_COUNT][LANG_COUNT] = {
 	[T_POWER_FAILED]   = { "電源を切ることができませんでした", "Could not power off" },
 	[T_BATTERY]        = { "電池 %d%%", "Battery %d%%" },
 	[T_CHARGING]       = { " 充電中", " charging" },
+	[T_FULL]           = { " 満充電", " full" },
 	[T_VOLUME_HDR]     = { "音量 %d%%", "Volume %d%%" },
 	[T_MUTED]          = { " (ミュート)", " (muted)" },
 	[T_NO_APPS]        = { "アプリが登録されていません", "No applications registered" },

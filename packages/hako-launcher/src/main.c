@@ -769,7 +769,8 @@ static void draw_header(Launcher *l)
 	if (l->sys.battery >= 0) {
 		snprintf(buf, sizeof buf, T(T_BATTERY), l->sys.battery);
 		x -= ui_text(&ui, ui.mid, x, 26, l->sys.battery <= 15 ? C_WARN : C_DIM, ALIGN_RIGHT, 0, "%s%s", buf,
-		             !strcmp(l->sys.battery_status, "Charging") ? T(T_CHARGING) : "") + 30;
+		             !strcmp(l->sys.battery_status, "Charging") ? T(T_CHARGING) :
+		             !strcmp(l->sys.battery_status, "Full") ? T(T_FULL) : "") + 30;
 	}
 	if (l->sys.volume >= 0) {
 		snprintf(buf, sizeof buf, T(T_VOLUME_HDR), (int)roundf(l->sys.volume * 100));

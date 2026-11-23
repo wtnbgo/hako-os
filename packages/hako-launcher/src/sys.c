@@ -86,6 +86,26 @@ void sys_refresh(SysState *s)
 	s->battery = read_int("/sys/class/power_supply/battery/capacity", -1);
 	if (!read_line("/sys/class/power_supply/battery/status", s->battery_status, sizeof s->battery_status))
 		s->battery_status[0] = 0;
+	/* The fuel gauge only refreshes its status when the charger sends a
+	 * change notice, and the pm8150b charger sends none when charging
+	 * terminates: the gauge then says "Charging" at 100 % for good. Trust a
+	 * charger that says "Full". */
+	if (!strcmp(s->battery_status, "Charging")) {
+		DIR *d = opendir("/sys/class/power_supply");
+		struct dirent *e;
+		while (d && (e = readdir(d))) {
+			char path[300], st[32];
+			if (e->d_name[0] == '.' || !strcmp(e->d_name, "battery"))
+				continue;
+			snprintf(path, sizeof path, "/sys/class/power_supply/%s/status", e->d_name);
+			if (read_line(path, st, sizeof st) && !strcmp(st, "Full")) {
+				strcpy(s->battery_status, "Full");
+				break;
+			}
+		}
+		if (d)
+			closedir(d);
+	}
 }
 
 void sys_set_volume(SysState *s, float v)
