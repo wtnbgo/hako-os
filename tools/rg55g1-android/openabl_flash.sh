@@ -1,10 +1,14 @@
 #!/system/bin/sh
 # Write OpenABL v1.2 (SM4450) to abl_a and abl_b, with checks before and after.
-# Run via run_check.sh (checks only) / run_flash.sh: a root script runner (Anbernic: AnbernicControl's script runner; TO CHECK)
+# Run via run_check.sh (checks only) / run_flash.sh: a root script runner (Anbernic: AnbernicControl's script runner)
 # sends one line per command, so the wrappers are one line each.
 #
+# NOTE: on stock firmware V3.0.9 the runner stays in the SELinux domain system_app and
+# cannot read or write any partition, so this script stops at the backup check. The
+# RG 55G1 was backed up and flashed over EDL instead (tools/rg55g1-edl/, docs chapter 5).
+#
 # Refuses to write unless:
-#   - the device is an Anbernic RG 55G1 on SM4450 (platform TO CHECK on the device)
+#   - the device is an Anbernic RG 55G1 on SM4450 (platform "parrot", read on the device)
 #   - the elf matches the OpenABL v1.2 sha256
 #   - the current abl_a/abl_b match the backups in hako/backup/ (= the backup is valid)
 # After each write the partition is read back and compared.

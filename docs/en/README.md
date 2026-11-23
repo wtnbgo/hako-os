@@ -13,7 +13,7 @@ and for putting your own apps on them. The only supported device right now is th
 | 2 | [2-development-and-samples.md](2-development-and-samples.md) | Day-to-day steps for installing and running apps on the device, and how to use each sample (SDL3 / LÖVE / raylib / Siv3D / Kirikiri Z) |
 | 3 | [3-packaging-an-app.md](3-packaging-an-app.md) | Turning what you made into a .deb, and bundling it into a single image |
 | 4 | [4-new-boards.md](4-new-boards.md) | Preparing an image for another device of the same family (OpenABL + Qualcomm) |
-| 5 | [5-example-rg55g1.md](5-example-rg55g1.md) | Worked example of chapter 4: the Anbernic RG 55G1 (SM4450, in progress) |
+| 5 | [5-example-rg55g1.md](5-example-rg55g1.md) | Worked example of chapter 4: the Anbernic RG 55G1 (SM4450) |
 | - | [reference.md](reference.md) | Details on structure, packages, configuration and troubleshooting |
 
 ## Working with an AI agent

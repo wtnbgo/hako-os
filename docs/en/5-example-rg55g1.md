@@ -7,7 +7,8 @@ The SoC is different (the Retroid Pocket Mini is SM8250, the RG 55G1 is SM4450),
 It is kept as a model for the next device: **what was looked up, what each decision rests on, and what was checked on the device**.
 
 - The first half (research, preparation) was done in the repository before the device arrived.
-- The second half (after arrival) is the on-device procedure and a log to fill in during the work.
+- The second half (after arrival) is the on-device procedure and its log.
+  - Writing the bootloader worked neither with the planned Android root scripts nor with fastboot; it was done over **EDL** (3.2, 3.3).
 
 ## 0. Overview
 
@@ -17,8 +18,8 @@ It is kept as a model for the next device: **what was looked up, what each decis
 | Kernel | Per-SoC kernel builds, build the SM4450 one | no | 1 h + 8 min build |
 | bsp | `rg55g1-bsp` from `rpmini-bsp` | no | 1 h |
 | Image, Android | `elbe/rg55g1-dev.xml`, `tools/rg55g1-android/` | no | 30 min |
-| Backup, OpenABL | Back up from Android, write OpenABL | yes | 30 min |
-| First boot, tuning | Rotation, touch, pad, audio, USB, Wi-Fi | yes | half a day+ |
+| Backup, OpenABL | Back up over EDL, write OpenABL over EDL | yes | 1-2 h (half a day the first time, finding out how) |
+| First boot, tuning | Rotation, touch, pad, audio, USB, Wi-Fi, GPU, clock | yes | half a day+ |
 
 ## 1. Research
 
@@ -44,12 +45,19 @@ A DTS reads as "the list of this device's hardware".
 
 ### 1.2 Bootloader (OpenABL)
 
-- The OpenABL v1.2 release has `abl_signed-SM4450.elf`.
+- The OpenABL v1.2 release has `abl_signed-SM4450.elf` for SM4450.
   - sha256 `8d73232614bdf50d602dfb934157328b95fc90f1ea22ba71dbc8836bc7aa8a3b`, 532480 bytes.
-- Flashing works like on the Retroid Pocket Mini: a root script on Android dd's it to `abl_a` / `abl_b`.
-- **The difference is the device check values**.
-  - Android's `getprop ro.board.platform` and `ro.product.model` are unknown until read on the device.
-  - The flash script therefore always stops while they are empty.
+- ROCKNIX's procedure: install an updated Anbernic app (AnbernicControl.apk) on Android, then `dd` to `abl_a` / `abl_b`
+  from "Handheld Settings > Advanced > Root Scripts".
+- **On the unit that arrived (stock firmware V3.0.9) neither that nor fastboot worked.**
+  - Root Scripts run as root (uid 0) but stay in the SELinux domain `system_app`, which cannot read any partition under
+    `/dev/block` (the same after installing the updated app and rebooting).
+  - The bootloader is unlocked from the factory (`ro.boot.flash.locked=0`, `verifiedbootstate=orange`), but `fastboot flash`
+    fails with `unknown command` (the transfer goes through, "Writing" fails). `fastboot oem edl` too.
+  - `adb root` is not available (production build).
+- So backup and writing were done over **EDL** (Qualcomm 9008 mode) (3.2, 3.3).
+  - `adb reboot edl` enters it. EDL runs before the ABL, so a bad ABL can be put back from EDL.
+- The values read on Android are in 4.1.
 
 ### 1.3 Kernel
 
@@ -131,26 +139,27 @@ Decisions:
 
 ### 2.2 bsp package `rg55g1-bsp`
 
-Made from `packages/rpmini-bsp/` with these changes:
+Made from `packages/rpmini-bsp/` with these changes. The state column is after the checks on the device.
 
 | File | Content | State |
 |---|---|---|
-| `etc/default/rg55g1-esp` | boot entry `rg55g1`, dtb `qcom/sm4450-anbernic-rg55g1.dtb`, command line | final |
-| `usr/sbin/rg55g1-update-esp` | puts kernel, initrd and dtb on the ESP (looks for `*-sm4450` kernels) | final |
-| `usr/lib/rg55g1/usb-gadget` etc. | USB network and serial, binds to the first `/sys/class/udc` entry | TO CHECK (UDC present) |
-| `usr/share/alsa/ucm2/...` | ROCKNIX UCM as is | TO CHECK (sound) |
-| `usr/share/wireplumber/.../51-rg55g1.conf` | forced S16LE, initial volume | TO CHECK |
-| `usr/lib/hako/hw/volume` | volume keys without PipeWire | TO CHECK (mixer names) |
-| `usr/lib/hako/session.d/10-rg55g1.sh` | `HAKO_ROTATE=270` | TO CHECK (orientation) |
-| `usr/lib/udev/rules.d/72-rg55g1-touch-rotate.rules` | touch rotation matrix (for 270) | TO CHECK |
+| `etc/default/rg55g1-esp` | boot entry `rg55g1`, dtb `qcom/sm4450-anbernic-rg55g1.dtb`, kernel options | final |
+| `usr/sbin/rg55g1-update-esp` | puts kernel, initrd and dtb on the ESP (looks for the `*-sm4450` kernel) | final |
+| `usr/lib/rg55g1/usb-gadget` etc. | USB network and serial; the UDC is the first in `/sys/class/udc` | final (the PC sees NCM and a COM port) |
+| `usr/share/alsa/ucm2/...` | ROCKNIX's UCM as is | speakers final; switching to headphones unsolved (4.3) |
+| `usr/share/wireplumber/.../51-rg55g1.conf` | S16LE, initial volume | plays; whether S24_LE is quiet is TO CHECK |
+| `usr/lib/hako/hw/volume` | volume keys without PipeWire | the mixer controls exist; not tried without PipeWire |
+| `usr/lib/hako/session.d/10-rg55g1.sh` | rotation (`HAKO_ROTATE=270`), pad layout and mapping, GPU (hako-mesa) | final |
+| `usr/lib/udev/rules.d/72-rg55g1-touch-rotate.rules` | touch rotation matrix (for 270) | final |
+| `usr/lib/udev/rules.d/71-rg55g1-wcd937x-nosleep.rules` | keep the WCD937x awake (added after arrival) | in, but does not fix the headphones on its own |
 
-**Not taken over** from the Retroid Pocket Mini, and why:
+What was **not** taken over from the Retroid Pocket Mini, and why:
 
 | rpmini-bsp file | Why |
 |---|---|
-| `70-rpmini-gamepad.rules` | Retroid's pad reports no buttons and is taken for a mouse. The RG 55G1 pad reports normal buttons, so it should not be needed |
-| `71-rpmini-wcd938x-nosleep.rules` | for WCD938x. The RG 55G1 has a WCD937x; add a similar rule if headphone detection stops working |
-| `display-audio-prime`, `HDMI-RP.conf`, ... | DP audio. The RG 55G1 has no video output |
+| `70-rpmini-gamepad.rules` | works around the Retroid pad being taken for a mouse (no buttons); the RG 55G1 pad reports normal buttons (checked) |
+| `71-rpmini-wcd938x-nosleep.rules` | for WCD938x; the headphone jack was detected late on the device, so the same rule was added for WCD937x (table above) |
+| `display-audio-prime`, `HDMI-RP.conf` etc. | audio over the video output (DP); the RG 55G1 has none |
 
 ### 2.3 Image description
 
@@ -163,99 +172,191 @@ bash scripts/build-packages.sh                 # into the repository, rg55g1-bsp
 BOARD=rg55g1 bash scripts/build-image.sh dev   # -> rg55g1-dev.img
 ```
 
-### 2.4 Android scripts
+### 2.4 Android and EDL scripts
 
-`tools/rg55g1-android/` was made from `tools/rpmini-android/`.
-
-- `rg55g1_backup.sh`: also saves `dtbo_a` and `vendor_boot_a` (to read the stock DTS later; never written back).
-- `openabl_flash.sh`: SM4450 elf and hash. Stops without writing while `PLAT_EXPECT` / `MODEL_EXPECT` are empty.
-- `openabl_restore.sh`: likewise stops while `PLAT_EXPECT` is empty.
+- `tools/rg55g1-android/`: made from `tools/rpmini-android/`, for the Android root script runner.
+  - `rg55g1_backup.sh`: also saves `dtbo_a` and `vendor_boot_a` (to look at the stock DTS later).
+  - `openabl_flash.sh` / `openabl_restore.sh`: stop while the device values (`PLAT_EXPECT` / `MODEL_EXPECT`) are empty; they were filled in after arrival.
+  - **On V3.0.9 they cannot read the partitions, so they were used neither for the backup nor for writing** (1.2). `run_check.sh` still shows the device values.
+- `tools/rg55g1-edl/edl_xml.py`: makes the fh_loader XML files for EDL (added after arrival).
+  - `gpt`: read the GPT of each LUN. `backup`: from those GPTs, read the given partitions (and list all in `parts.txt`).
+    `flash`: write a file to the given partitions, and read the written range back.
+  - Partition locations always come from the GPT, never typed by hand.
 
 ## 3. After arrival
 
-> Checks that need eyes or ears (buttons, sound, screen) start only after the agent has given the steps
-> and the person has answered "ready".
+> Checks that need eyes, ears or buttons: the agent explains the steps and waits until the person says "ready".
 
-### 3.1 Record and back up from Android
+### 3.1 Prepare on Android
 
-1. Enable USB debugging in developer options and connect to the PC.
-2. Copy `tools/rg55g1-android/` to internal storage and run `run_check.sh` with Anbernic's "run script as root".
-   Note `platform=... model=...` in `flash.log`.
-3. Run `run_backup.sh` and copy all of `hako/backup/` to the PC (the only way back for this unit).
-4. Put the values into `PLAT_EXPECT` / `MODEL_EXPECT` of `openabl_flash.sh` and `PLAT_EXPECT` of `openabl_restore.sh`, and commit.
+1. Finish the first-run setup and apply system updates (it went to V3.0.9).
+2. Enable USB debugging in the developer options and check that `adb devices` shows it.
+   With other Android devices connected, point at the RG 55G1 with `adb -s <serial>`.
+3. Read the device values and the bootloader state (results in 4.1).
 
-### 3.2 Write OpenABL (done by a person)
+```sh
+adb shell getprop ro.board.platform      # parrot
+adb shell getprop ro.product.model       # RG 55G1
+adb shell getprop ro.boot.flash.locked   # 0 (unlocked)
+```
 
-5. Check that every test in `run_check.sh` passes, then run `run_flash.sh`.
-6. Reboot and check that the OpenABL menu appears (select with the volume keys).
+### 3.2 Back up over EDL
 
-### 3.3 (optional) Baseline with ROCKNIX
+What is needed (Windows):
 
-7. Boot ROCKNIX for SM4450 from a separate microSD and collect the data listed under "baseline" in [chapter 4](4-new-boards.md).
-   It is the reference when something does not work on hako.
+| Item | Notes |
+|---|---|
+| QPST | `QSaharaServer.exe` (sends the loader) and `fh_loader.exe` (reads / writes). The ones from QFIL 2.0.3.5 worked |
+| Qualcomm USB driver | the device in EDL shows up as `Qualcomm HS-USB QDLoader 9008 (COMn)` |
+| firehose loader `xbl_s_devprg_ns.melf` | the program that reads and writes on the device side. The one in `stock/firmware/` of TheGammaSqueeze/sd-tools was used (signed with Qualcomm test keys, 1.7 MB). Third-party, so it is not in the repository |
 
-### 3.4 First boot of hako
+Steps (`<dir>` is where the backup goes, `COMn` the COM port that appears in EDL):
 
-8. Write `rg55g1-dev.img` to microSD and boot it from the OpenABL menu.
-9. Watch the log scroll and the launcher come up. If not, connect USB and `ssh root@192.168.7.2`
-   (if that fails too, use Wi-Fi, or take the ROCKNIX baseline and compare).
+```powershell
+adb reboot edl                                   # the screen stays black; a new COM port means it is in EDL
+QSaharaServer.exe -p \\.\COMn -s 13:xbl_s_devprg_ns.melf
+python3 tools/rg55g1-edl/edl_xml.py gpt <dir>
+fh_loader.exe --port=\\.\COMn --memoryname=UFS --sendxml=read_gpt.xml --convertprogram2read --search_path=<dir> --mainoutputdir=<dir> --noprompt --zlpawarehost=1
+python3 tools/rg55g1-edl/edl_xml.py backup <dir> abl_a,abl_b,persist,devinfo,misc,modemst1,modemst2,fsg,fsc,keystore,frp,uefivarstore,secdata,storsec,ssd,cdt,ddr,splash,logfs,limits,limits-cdsp,apdp,dip,spunvm,dtbo_a,vendor_boot_a
+fh_loader.exe --port=\\.\COMn --memoryname=UFS --sendxml=read_parts.xml --convertprogram2read --search_path=<dir> --mainoutputdir=<dir> --noprompt --zlpawarehost=1
+fh_loader.exe --port=\\.\COMn --reset --noprompt --zlpawarehost=1   # boot Android again
+```
 
-### 3.5 Checks and where to fix
+- `--convertprogram2read` turns the `<program>` (write) entries of the XML into reads. Always pass it for a backup.
+- Record the sha256 of every file and keep a second copy elsewhere on the PC (the only way back for this unit).
+- `abl_a` / `abl_b` are on LUN 4 (4.1): the same data ROCKNIX's script would `dd`, read over EDL.
+
+### 3.3 Write OpenABL over EDL (after the person agrees)
+
+```powershell
+python3 tools/rg55g1-edl/edl_xml.py flash <dir> abl_signed-SM4450.elf abl_a,abl_b
+adb reboot edl
+QSaharaServer.exe -p \\.\COMn -s 13:xbl_s_devprg_ns.melf
+fh_loader.exe --port=\\.\COMn --memoryname=UFS --sendxml=write_abl_signed-SM4450.xml --search_path=<dir> --mainoutputdir=<dir> --noprompt --zlpawarehost=1
+fh_loader.exe --port=\\.\COMn --memoryname=UFS --sendxml=readback_abl_signed-SM4450.xml --convertprogram2read --search_path=<dir> --mainoutputdir=<dir> --noprompt --zlpawarehost=1
+```
+
+1. Check that the sha256 of `readback_abl_a.bin` and `readback_abl_b.bin` is OpenABL's (`8d7323…`).
+2. Hold volume down, reset with `fh_loader.exe --port=\\.\COMn --reset ...`, and check that the OpenABL menu appears.
+3. To go back to stock, write the backup's `abl_a.img` / `abl_b.img` the same way
+   (`edl_xml.py flash <dir> abl_a.img abl_a`, likewise for `abl_b`).
+
+> OpenABL's "Device model" list comes from the dtbs on the inserted microSD card. Without a card it says `no device trees found`; that is not an error.
+
+### 3.4 (optional) Baseline with ROCKNIX
+
+Write ROCKNIX for SM4450 to another microSD card, boot it and record with the commands under "baseline" in [chapter 4](4-new-boards.md).
+It is what to compare against when something does not work on hako (skipped this time).
+
+### 3.5 First boot of hako
+
+1. Write `rg55g1-dev.img` to a microSD card; in the OpenABL menu pick **Anbernic RG 55G1** as the device model, then Start.
+2. Watch whether it gets from the splash to the launcher.
+3. Connect USB and `ssh root@192.168.7.2`.
+   - The Retroid Pocket Mini uses the same address, so the ssh host keys clash. Use another name for the RG 55G1:
+     `ssh -o HostKeyAlias=rg55g1 root@192.168.7.2`, and `HAKO_SSH_OPTS='-o HostKeyAlias=rg55g1' scripts/dev-update.sh` for updates.
+4. If it neither reaches the launcher nor answers over USB:
+   - see whether a long press on the power key runs the shutdown (then Linux is up);
+   - put the microSD card into a Linux PC, mount rootA read-only and read the log of the last boot:
+     `journalctl -D <mnt>/var/log/journal -b -1 -p warning`.
+     WSL's `wsl --mount` does not take USB SD card readers, so another Linux machine was used.
+
+### 3.6 Checks and where to fix
 
 | Item | How to check | Where to fix |
 |---|---|---|
-| Orientation | launcher shows in landscape, right way up | `HAKO_ROTATE` (`10-rg55g1.sh`) |
-| Touch | SDL3 sample draws the circle where touched | `72-rg55g1-touch-rotate.rules` |
-| Pad | `evtest` per button; ABXY positions and labels | `SDL_GAMECONTROLLERTYPE` (`10-rg55g1.sh`) |
-| `KEY_BACK` / `KEY_F10` buttons | `evtest`; map to the launcher menu? | launcher |
-| Sound (speakers, headphones) | sample sound, `aplay -l`, `amixer contents` | UCM, `51-rg55g1.conf` |
-| Volume keys | volume changes (with and without PipeWire) | `hw/volume` |
-| Headphone plug | switches over, still detected after a while | WCD937x nosleep rule |
+| Rotation | is the launcher landscape and the right way up | `HAKO_ROTATE` (`10-rg55g1.sh`) |
+| Touch | does the SDL3 sample draw the circle under the finger | `72-rg55g1-touch-rotate.rules` |
+| Pad | `evtest` for each button; ABXY position vs. print | `SDL_GAMECONTROLLERTYPE` / `SDL_GAMECONTROLLERCONFIG` (`10-rg55g1.sh`) |
+| The two buttons below the screen | `evtest` | `SDL_GAMECONTROLLERCONFIG` |
+| Audio (speakers, headphones) | sample sound, `aplay -l`, `amixer contents`, `wpctl status` | UCM, `51-rg55g1.conf` |
+| Volume keys | does the volume change (`volume up/down` in `journalctl -u triggerhappy`) | `hw/volume` |
+| Headphone plug / unplug | jack events (`EV_SW` in `evtest`) and the output | WCD937x, kernel |
 | USB network, serial | `ssh root@192.168.7.2`, COM port | `usb-gadget` |
-| Wi-Fi / Bluetooth | `iwctl`, `bluetoothctl`, launcher BT screen | firmware |
-| Fan | spinning? noise, temperatures (`/sys/class/thermal`) | decide how to control it |
+| Wi-Fi / Bluetooth | `iwctl station wlan0 scan`, `bluetoothctl list` | firmware |
+| Fan | speed (`/sys/class/hwmon/*/fan1_input`), noise, temperature | decide how to control it |
 | Battery | `/sys/class/power_supply` | - |
-| GPU | `vulkaninfo --summary`, raylib / Siv3D samples | - |
+| GPU | `vulkaninfo --summary`, `eglinfo -p surfaceless`, raylib / LÖVE samples | Mesa (hako-mesa) |
+| Clock | `timedatectl`, the time after a reboot | hako-rtc-offset |
 | Boot time | `systemd-analyze` | - |
 
-## 4. Log (filled in after arrival)
+> When recording buttons with `evtest`, stop the launcher first (`systemctl stop hako-session`);
+> otherwise pressing A starts an app.
 
-### 4.1 Android values
+## 4. Log
+
+### 4.1 Values read on Android and over EDL
 
 | Value | Result |
 |---|---|
-| `ro.board.platform` | (pending) |
-| `ro.product.model` | (pending) |
-| backup date, file count | (pending) |
+| `ro.board.platform` | `parrot` |
+| `ro.product.model` | `RG 55G1` |
+| `ro.soc.model` | `SG4250P` |
+| Stock firmware | V3.0.9 (system update after arrival) |
+| Bootloader | unlocked from the factory (`ro.boot.flash.locked=0`, `verifiedbootstate=orange`); `fastboot flash` not available |
+| `abl_a` / `abl_b` | LUN 4, start sector 6 / 262, 256 sectors each (1 MB, 4096-byte sectors); both stock copies identical |
+| Backup | over EDL: 26 partitions (243 MB) and the GPTs of 7 LUNs; `msadp` is not in the GPT; `modemst1` is all zeros (Wi-Fi only device) |
 
 ### 4.2 Results
 
 | Item | Result | Action |
 |---|---|---|
-| First boot | (pending) | |
-| Orientation | (pending) | |
-| Touch | (pending) | |
-| Pad | (pending) | |
-| Sound | (pending) | |
-| USB | (pending) | |
-| Wi-Fi / BT | (pending) | |
-| Fan | (pending) | |
+| First boot | black screen after the splash (GPU not supported) | 4.3 item 4; boots in 7.4 s after the fix |
+| Rotation | right with `HAKO_ROTATE=270` | - |
+| Touch | right position | - |
+| Pad | Switch-style print; the left face button is `BTN_NORTH`, the top one `BTN_WEST` (the reverse of the Mini) | explicit mapping, matches the print (rg55g1-bsp 0.1.5) |
+| Two buttons below the screen | left `KEY_F10`, right `KEY_BACK` | mapped to `guide` and `misc1`; the launcher does not use them yet |
+| Audio | speakers play; volume keys work | - |
+| Headphones | the output stays on the speakers (unsolved) | 4.3 item 7 |
+| USB | NCM and ACM seen by the PC; USB role is device | - |
+| Wi-Fi / BT | scanning works, the BT controller is there; connecting not tried | - |
+| Fan | always running (3200 rpm, pwm 102); 34-35 °C | no temperature-based control yet |
+| Battery | level and state readable through pmic-glink | - |
+| GPU | Mesa 26.2.6 (hako-mesa): `Turnip Adreno (TM) 613`, GL `FD613` | 4.3 item 4 |
+| Clock | came up with an April date | 4.3 item 6 (hako-base 0.2.16) |
 
 ### 4.3 Problems hit
 
-(added after arrival)
+1. **Root Scripts cannot touch the partitions.** Root, but in SELinux `system_app`: listing and reading `/dev/block` is refused
+   through every path (`by-name`, `bootdevice`, `platform/...`, `sde1`, whole disks). → switched to EDL.
+2. **`fastboot flash` says `unknown command`.** Unlocked, but Anbernic's ABL has no write command. → wrote over EDL.
+3. **OpenABL's device model says `no device trees found`.** Only because no microSD card was inserted.
+4. **Black screen after boot** (backlight on, no reaction to buttons).
+   - Log: cage `Unable to create the wlroots renderer`, after Mesa's `unsupported GPU id 0x0 / chip id 0xd506010300`.
+   - Neither trixie's Mesa 25.0 nor 26.1 in backports knows the Adreno 613; Mesa 26.2 added one line to its GPU list
+     (`GPUId(613)` in `freedreno_devices.py`). ROCKNIX ships Mesa 26.2.4, so it works there as is.
+   - First the launcher came up with software rendering (`WLR_RENDERER=pixman`, `SDL_RENDER_DRIVER=software`) to go on with the other checks.
+   - Then **hako-mesa** was made: Debian's Mesa 26.2.6 orig tarball (version and sha256 pinned), cross-built with only freedreno and
+     turnip, without LLVM (about 2 minutes). It lives in `/usr/lib/hako/mesa` and does not replace Debian's Mesa; only the session uses it,
+     through `/usr/lib/hako/mesa/env.sh` (LD_LIBRARY_PATH, the glvnd EGL vendor file, the Vulkan ICD). Drop it once Debian's Mesa is 26.2 or later.
+   - Build note: by default meson downloads missing parts (libarchive, libxml2) from the net; use `--wrap-mode=nodownload` and Debian's packages.
+5. **X and Y swapped.** SDL's automatic mapping does not match how this pad reports the left and top buttons; recorded the presses with `evtest` and wrote an explicit mapping.
+6. **The clock said April.** The PMIC RTC (rtc-pm8xxx) keeps counting while the device is off, but Linux cannot set it
+   (Android keeps its own offset), and there was no NTP.
+   → `hako-rtc-offset` (save the difference between the clock and the RTC, restore it early at boot) and `systemd-timesyncd` in hako-base.
+   `dev-update.sh` sets the clock from the PC (apt rejects Release files "from the future" otherwise).
+7. **Headphones (unsolved).** A plug is taken for a line out (`Impedance detect ramp error`), so `Headphone Jack` stays `off`;
+   the plug is detected late and the unplug not at all. Keeping the WCD937x awake did not help. The kernel's MBHC (DTS thresholds etc.) needs a look.
+8. **The PC did not see the USB device on the very first boot.** It has on every boot since; cause unknown.
 
 ## 5. Lessons for the next device
 
-- **If the same distribution (ROCKNIX) supports the device at the same commit, the kernel is "add one SoC file"**:
-  create `kernel/soc/<SOC>.conf` and `firmware-<SOC>.list`, then `SOC=<SOC> kernel/build.sh`.
-- Mark every guessed value TO CHECK. `grep -rn "TO CHECK" packages/<board>-bsp` is the arrival-day work list.
-- Make flashing scripts **stop while the check values are empty**, so a forgotten value cannot lead to writing the wrong device.
-- When copying the previous bsp, ask for each file why it was needed.
-  Workarounds for the previous device (pad taken for a mouse, codec power saving) may be unnecessary on the new one, or needed in another form.
+- **If the same distribution (ROCKNIX) handles the device at the same commit, the kernel only needs one more SoC config file.**
+  Create `kernel/soc/<SOC>.conf` and `firmware-<SOC>.list`, then `SOC=<SOC> kernel/build.sh`.
+- **Have more than one way to write.** Which of Android root, fastboot and EDL works depends on the stock firmware version.
+  EDL runs before the ABL, so a bad ABL can be put back, and the backup can be taken over EDL too.
+- **The GPU depends on the Mesa version.** Debian stable's Mesa may not know a new SoC. Go on with the other checks under software rendering
+  and provide Mesa separately (hako-mesa).
+- **Some boards have an RTC that cannot be set.** Keep the clock with NTP and a saved offset.
+- Always mark guessed values TO CHECK. `grep -rn "TO CHECK" packages/<board>-bsp` is the arrival-day work list.
+- Make writing scripts **stop while their check values are empty**, so they cannot write to the wrong device by accident.
+- When copying the bsp of the previous device, ask for each file why it was needed.
+  Workarounds for the previous device (pad taken for a mouse, codec power saving) may be unnecessary, or needed in another form.
+- Stop the apps before checking input; otherwise the launcher starts an app while you record buttons.
 
 ## Asking an agent (examples)
 
-- "The RG 55G1 arrived. Start from 3.1. I will paste the run_check.sh output; fill in PLAT_EXPECT and MODEL_EXPECT."
-- "First boot done and ssh works. Go through the 3.5 table from the top. Give me the steps before any check that needs me."
-- "Write the results into the chapter 4 log, and fix the comments where a TO CHECK is now settled."
+- "The RG 55G1 arrived. Let's start at 3.1. It is connected over adb; read the device values and the bootloader state."
+- "I want a backup over EDL. Follow 3.2; decide the partitions and the destination with me before starting."
+- "First boot done and ssh works. Go through the table in 3.6 from the top; for checks that need me, explain first and wait."
+- "Write the results into the log in chapter 4, and fix the comments where a TO CHECK can go."

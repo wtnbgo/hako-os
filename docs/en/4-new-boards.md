@@ -86,7 +86,7 @@ Fill in the table in "Hardware status" in [reference.md](reference.md) for the n
 | Wi-Fi, Bluetooth | `iwctl`, `bluetoothctl` |
 | Boot time | `systemd-analyze` |
 
-A full worked example (research, preparation, arrival-day checklist) is [5-example-rg55g1.md](5-example-rg55g1.md).
+A full worked example (research, preparation, EDL backup and flashing, first boot) is [5-example-rg55g1.md](5-example-rg55g1.md).
 
 ## Asking an agent (examples)
 
