@@ -24,7 +24,11 @@ SDL_GAMECONTROLLERCONFIG="190000004b4800000111000000010000,Anbernic RG 55G1 Game
 
 # GPU: Debian's Mesa (25.0, and 26.1 in backports) does not know the Adreno 613
 # ("unsupported GPU id ... chip id 0x..06010300"); it was added in Mesa 26.2.
-# Until then cage draws in software and SDL apps use the software renderer.
-# GPU apps (raylib, LOVE, Siv3D) do not run. Remove both lines with Mesa >= 26.2.
-WLR_RENDERER=pixman
-SDL_RENDER_DRIVER=software
+# The session uses hako-mesa (Mesa 26.2, freedreno / turnip) from
+# /usr/lib/hako/mesa instead. Without it, fall back to software rendering.
+if [ -r /usr/lib/hako/mesa/env.sh ]; then
+	. /usr/lib/hako/mesa/env.sh
+else
+	WLR_RENDERER=pixman
+	SDL_RENDER_DRIVER=software
+fi

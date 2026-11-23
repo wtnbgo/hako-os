@@ -1,0 +1,57 @@
+#!/usr/bin/make -f
+# Upstream source: Debian's mesa orig tarball (pinned version and sha256),
+# fetched into build/mesa/src/ of the repository and checked before use.
+MESA_VER := 26.2.6
+MESA_SHA256 := b9436b3e1a8be76fbd4823dc884f90596ab7c6ac5e1867a305e66ffccfb31a92
+MESA_URL := https://deb.debian.org/debian/pool/main/m/mesa/mesa_$(MESA_VER).orig.tar.xz
+
+include /usr/share/dpkg/architecture.mk
+TOP := $(abspath $(CURDIR)/../..)
+CACHE := $(TOP)/build/mesa/src
+TARBALL := $(CACHE)/mesa_$(MESA_VER).orig.tar.xz
+O := $(CURDIR)/obj-mesa
+PREFIX := /usr/lib/hako/mesa
+DEST := $(CURDIR)/debian/hako-mesa
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	mkdir -p $(CACHE)
+	[ -f $(TARBALL) ] || curl -sSfL -o $(TARBALL).part $(MESA_URL) && mv -f $(TARBALL).part $(TARBALL) 2>/dev/null || true
+	echo "$(MESA_SHA256)  $(TARBALL)" | sha256sum -c --quiet
+	rm -rf $(O) && mkdir -p $(O)/src
+	tar -C $(O)/src --strip-components=1 -xf $(TARBALL)
+	printf "[binaries]\nc = '%s-gcc'\ncpp = '%s-g++'\nar = '%s-ar'\nstrip = '%s-strip'\npkg-config = '%s-pkg-config'\n\n[host_machine]\nsystem = 'linux'\ncpu_family = '%s'\ncpu = '%s'\nendian = 'little'\n" \
+		$(DEB_HOST_GNU_TYPE) $(DEB_HOST_GNU_TYPE) $(DEB_HOST_GNU_TYPE) $(DEB_HOST_GNU_TYPE) $(DEB_HOST_GNU_TYPE) \
+		$(DEB_HOST_GNU_CPU) $(DEB_HOST_GNU_CPU) > $(O)/cross.txt
+	meson setup $(O)/build $(O)/src --cross-file $(O)/cross.txt --wrap-mode=nodownload \
+		--prefix=$(PREFIX) --libdir=lib --buildtype=release -Db_ndebug=true \
+		-Dplatforms=wayland -Dgallium-drivers=freedreno -Dvulkan-drivers=freedreno \
+		-Dfreedreno-kmds=msm -Dllvm=disabled -Dglx=disabled -Degl=enabled -Dgbm=enabled \
+		-Dglvnd=enabled -Dgles1=disabled -Dgles2=enabled -Dopengl=true \
+		-Dvalgrind=disabled -Dlibunwind=disabled -Dlmsensors=disabled -Dvideo-codecs= \
+		-Dgallium-va=disabled -Dbuild-tests=false -Dtools= -Dvulkan-layers=
+
+override_dh_auto_build:
+	ninja -C $(O)/build
+
+override_dh_auto_install:
+	DESTDIR=$(DEST) ninja -C $(O)/build install
+	rm -rf $(DEST)$(PREFIX)/include $(DEST)$(PREFIX)/lib/pkgconfig
+	# development symlinks only (libgallium-*.so and libvulkan_freedreno.so are the libraries)
+	rm -f $(DEST)$(PREFIX)/lib/libEGL_mesa.so $(DEST)$(PREFIX)/lib/libgbm.so
+	# a stable name for the Vulkan ICD file (meson names it after the CPU)
+	mv $(DEST)$(PREFIX)/share/vulkan/icd.d/freedreno_icd.*.json $(DEST)$(PREFIX)/share/vulkan/icd.d/freedreno_icd.json
+	install -m 644 debian/env.sh $(DEST)$(PREFIX)/env.sh
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+	rm -rf $(O)
+
+# private libraries: no shlibs file; resolve them from the package itself
+override_dh_makeshlibs:
+
+override_dh_shlibdeps:
+	dh_shlibdeps -l$(DEST)$(PREFIX)/lib

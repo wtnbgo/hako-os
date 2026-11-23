@@ -1,0 +1,6 @@
+hako-mesa (26.2.6-1) trixie; urgency=medium
+
+  * Initial package: Mesa 26.2.6 (Debian's orig tarball), freedreno and
+    turnip only, in /usr/lib/hako/mesa, for the Adreno 613 (RG 55G1).
+
+ -- hako-os <hako@hako-os>  Mon, 23 Nov 2026 21:00:00 +0900

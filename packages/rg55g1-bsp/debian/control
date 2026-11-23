@@ -10,6 +10,7 @@ Package: rg55g1-bsp
 Architecture: all
 Depends: ${misc:Depends},
  linux-image-7.2.0-sm4450,
+ hako-mesa,
  initramfs-tools,
  systemd,
  alsa-ucm-conf,

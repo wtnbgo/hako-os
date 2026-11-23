@@ -1,3 +1,10 @@
+rg55g1-bsp (0.1.7) trixie; urgency=medium
+
+  * GPU: the session uses hako-mesa (Mesa 26.2.6 with Adreno 613 support)
+    instead of software rendering; Depends: hako-mesa.
+
+ -- hako-os <hako@hako-os>  Mon, 23 Nov 2026 21:10:00 +0900
+
 rg55g1-bsp (0.1.6) trixie; urgency=medium
 
   * Keep the WCD937x SoundWire slaves awake (udev rule), so plugging in

@@ -1,0 +1,26 @@
+Source: hako-mesa
+Section: libs
+Priority: optional
+Maintainer: hako-os <hako@hako-os>
+Build-Depends: debhelper-compat (= 13), meson, ninja-build, pkgconf, bison, flex,
+ python3-mako:native, python3-yaml:native, python3-packaging:native,
+ glslang-tools, xz-utils, curl,
+ libdrm-dev, libexpat1-dev, libelf-dev, libzstd-dev, zlib1g-dev, libudev-dev,
+ libwayland-dev, libwayland-egl-backend-dev, wayland-protocols, libglvnd-dev,
+ libarchive-dev, libxml2-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: hako-mesa
+Architecture: arm64
+Depends: ${shlibs:Depends}, ${misc:Depends}, libegl1, libglvnd0, libvulkan1
+Description: Mesa with Adreno 613 support, for the hako session only
+ Mesa built from Debian's mesa source (newer than trixie's) with only the
+ freedreno drivers: OpenGL / GLES / EGL / GBM (gallium) and Vulkan (turnip).
+ Debian trixie's Mesa 25.0 (and 26.1 in backports) does not know the
+ Adreno 613 of the SM4450 (Anbernic RG 55G1); it was added in Mesa 26.2.
+ .
+ Installed in /usr/lib/hako/mesa, next to Debian's Mesa, which it does not
+ replace. A board selects it for the game session (LD_LIBRARY_PATH, the glvnd
+ EGL vendor file and the Vulkan ICD file; see /usr/lib/hako/mesa/env.sh).
+ Drop it once Debian's Mesa is new enough.
