@@ -1,3 +1,11 @@
+rg55g1-bsp (0.1.4) trixie; urgency=medium
+
+  * Session: software rendering (WLR_RENDERER=pixman, SDL_RENDER_DRIVER=
+    software). Debian's Mesa does not support the Adreno 613 yet, so cage
+    could not create its renderer and the screen stayed black.
+
+ -- hako-os <hako@hako-os>  Mon, 23 Nov 2026 19:10:00 +0900
+
 rg55g1-bsp (0.1.3) trixie; urgency=medium
 
   * No penguin logo, no cursor and no kernel warnings on the screen before

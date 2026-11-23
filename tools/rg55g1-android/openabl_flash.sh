@@ -24,8 +24,8 @@ plat=$(getprop ro.board.platform); model=$(getprop ro.product.model)
 echo "platform=$plat model=$model"
 # Fill these in from the first run_check.sh log on the device (flash.log shows
 # "platform=... model=..."); until then nothing is written.
-PLAT_EXPECT=""     # getprop ro.board.platform of the RG 55G1 (SM4450)
-MODEL_EXPECT=""    # getprop ro.product.model of the RG 55G1
+PLAT_EXPECT="parrot"     # getprop ro.board.platform of the RG 55G1 (SM4450)
+MODEL_EXPECT="RG 55G1"   # getprop ro.product.model of the RG 55G1
 [ -n "$PLAT_EXPECT" ] && [ -n "$MODEL_EXPECT" ] || fail "PLAT_EXPECT / MODEL_EXPECT not set yet (platform=$plat model=$model)"
 [ "$plat" = "$PLAT_EXPECT" ] || fail "not the expected platform ($PLAT_EXPECT)"
 [ "$model" = "$MODEL_EXPECT" ] || fail "not an Anbernic RG 55G1 ($MODEL_EXPECT)"

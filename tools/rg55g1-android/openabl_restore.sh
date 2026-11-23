@@ -12,7 +12,7 @@ fail() { echo "ABORT: $*"; echo "RESULT=ABORTED"; exit 1; }
 sha() { sha256sum "$1" | cut -d' ' -f1; }
 
 echo "start $(date)"
-PLAT_EXPECT=""     # same value as in openabl_flash.sh (getprop ro.board.platform)
+PLAT_EXPECT="parrot"     # same value as in openabl_flash.sh (getprop ro.board.platform)
 [ -n "$PLAT_EXPECT" ] || fail "PLAT_EXPECT not set yet (platform=$(getprop ro.board.platform))"
 [ "$(getprop ro.board.platform)" = "$PLAT_EXPECT" ] || fail "not the expected platform ($PLAT_EXPECT)"
 

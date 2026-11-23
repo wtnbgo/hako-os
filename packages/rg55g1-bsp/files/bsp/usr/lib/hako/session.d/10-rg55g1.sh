@@ -12,3 +12,10 @@ HAKO_ROTATE=270
 # itself. TO CHECK on the device: the printed layout (Xbox-like A at the
 # bottom, or Nintendo-like A on the right). For a Nintendo layout add:
 #SDL_GAMECONTROLLERTYPE=<vid>/<pid>=SwitchPro
+
+# GPU: Debian's Mesa (25.0, and 26.1 in backports) does not know the Adreno 613
+# ("unsupported GPU id ... chip id 0x..06010300"); it was added in Mesa 26.2.
+# Until then cage draws in software and SDL apps use the software renderer.
+# GPU apps (raylib, LOVE, Siv3D) do not run. Remove both lines with Mesa >= 26.2.
+WLR_RENDERER=pixman
+SDL_RENDER_DRIVER=software
