@@ -305,7 +305,7 @@ It is what to compare against when something does not work on hako (skipped this
 | Rotation | right with `HAKO_ROTATE=270` | - |
 | Touch | right position | - |
 | Pad | Switch-style print; the left face button is `BTN_NORTH`, the top one `BTN_WEST` (the reverse of the Mini) | explicit mapping, matches the print (rg55g1-bsp 0.1.5) |
-| Two buttons below the screen | left `KEY_F10`, right `KEY_BACK` | mapped to `guide` and `misc1`; the launcher does not use them yet |
+| Two buttons below the screen | left `KEY_F10`, right `KEY_BACK` | passed to apps as `guide` (HOME) and `misc1`; the launcher does not use them |
 | Audio | speakers play; volume keys work | - |
 | Headphones | the output stays on the speakers (unsolved) | 4.3 item 7 |
 | USB | NCM and ACM seen by the PC; USB role is device | - |
