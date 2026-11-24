@@ -308,7 +308,7 @@ It is what to compare against when something does not work on hako (skipped this
 | Two buttons below the screen | left `KEY_F10`, right `KEY_BACK` | passed to apps as `guide` (HOME) and `misc1`; the launcher does not use them |
 | Audio | speakers play; volume keys work | - |
 | Headphones | the output stays on the speakers (unsolved) | 4.3 item 7 |
-| USB | NCM and ACM seen by the PC; USB role is device | - |
+| USB | NCM and ACM seen by the PC; USB role is device; did not come back after a replug | 4.3 item 8 (rg55g1-bsp 0.1.9) |
 | Wi-Fi / BT | scanning works, the BT controller is there; connecting not tried | - |
 | Fan | always running (3200 rpm, pwm 102); 34-35 °C | no temperature-based control yet |
 | Battery | level and state readable through pmic-glink | - |
@@ -337,7 +337,15 @@ It is what to compare against when something does not work on hako (skipped this
    `dev-update.sh` sets the clock from the PC (apt rejects Release files "from the future" otherwise).
 7. **Headphones (unsolved).** A plug is taken for a line out (`Impedance detect ramp error`), so `Headphone Jack` stays `off`;
    the plug is detected late and the unplug not at all. Keeping the WCD937x awake did not help. The kernel's MBHC (DTS thresholds etc.) needs a look.
-8. **The PC did not see the USB device on the very first boot.** It has on every boot since; cause unknown.
+8. **After unplugging and plugging the cable in again, the PC no longer sees the USB device.** On unplugging, the USB controller (dwc3)
+   suspends (`dwc3-qcom a600000.usb: remote wakeup not configured`) and does not come back: the Type-C port sees the partner and the role
+   stays device, but the UDC stays `not attached`. Toggling the role (none -> device) or re-binding the gadget does not help; unbinding and
+   binding the `dwc3-qcom` driver does.
+   -> rg55g1-bsp 0.1.9: when a Type-C partner appears, udev starts `rg55g1-usb-replug.service`, which re-binds the driver if the UDC is not
+   `configured` 5 seconds later (`/usr/lib/rg55g1/usb-replug`). About 8 seconds from plugging in until the PC sees it. The first boot without USB
+   probably had the same cause.
+   How it was found: a script started with `systemd-run` wrote the state (`/sys/class/usb_role/*/role`, `/sys/class/udc/*/state`,
+   `/sys/class/typec/port0-partner`) to the journal every second; unplug, plug, reboot, then `journalctl -b -1` (no ssh while USB is gone).
 
 ## 5. Lessons for the next device
 

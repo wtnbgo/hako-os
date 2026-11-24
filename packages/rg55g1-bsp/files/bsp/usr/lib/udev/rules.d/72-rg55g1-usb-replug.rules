@@ -1,0 +1,3 @@
+# A cable is plugged into the USB-C port again: make sure the USB device mode comes back
+# (see /usr/lib/rg55g1/usb-replug)
+ACTION=="add", SUBSYSTEM=="typec", KERNEL=="port*-partner", TAG+="systemd", ENV{SYSTEMD_WANTS}+="rg55g1-usb-replug.service"

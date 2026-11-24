@@ -11,6 +11,7 @@ override_dh_fixperms:
 	chmod 0755 \
 		debian/rg55g1-bsp/usr/sbin/rg55g1-update-esp \
 		debian/rg55g1-bsp/usr/lib/rg55g1/usb-gadget \
+		debian/rg55g1-bsp/usr/lib/rg55g1/usb-replug \
 		debian/rg55g1-bsp/usr/lib/hako/hw/volume \
 		debian/rg55g1-bsp/etc/kernel/postinst.d/zz-rg55g1-esp \
 		debian/rg55g1-bsp/etc/initramfs/post-update.d/zz-rg55g1-esp

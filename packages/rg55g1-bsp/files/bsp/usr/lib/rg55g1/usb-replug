@@ -1,0 +1,39 @@
+#!/bin/sh
+# Brings the USB device mode back after the cable was unplugged and plugged in again.
+#
+# On the RG 55G1 the dwc3 controller suspends when the cable is unplugged
+# ("dwc3-qcom a600000.usb: remote wakeup not configured") and does not wake up when a
+# cable comes back: the Type-C port sees the partner and the role stays "device", but the
+# UDC stays "not attached", so the PC sees nothing until a reboot. Toggling the role or
+# re-binding the gadget does not help; re-binding the dwc3-qcom driver does.
+# Run by udev (72-rg55g1-usb-replug.rules) through rg55g1-usb-replug.service when a
+# Type-C partner appears.
+DEV=a600000.usb
+DRV=/sys/bus/platform/drivers/dwc3-qcom
+G=/sys/kernel/config/usb_gadget/hako
+
+state() { cat /sys/class/udc/$DEV/state 2>/dev/null || echo none; }
+
+[ "$(cat /sys/class/usb_role/*/role 2>/dev/null)" = device ] || exit 0   # host mode: not ours
+
+# a PC enumerates the gadget within a few seconds ("configured"); a stuck controller stays
+# "not attached" (or "powered"). A charger never configures it either: then the re-bind is
+# harmless (once per plug).
+for i in 1 2 3 4 5 6 7 8 9 10; do
+	[ "$(state)" = configured ] && exit 0
+	sleep 0.5
+done
+s=$(state)
+echo "usb-replug: UDC $s 5 s after a replug, re-binding $DEV"
+echo $DEV > $DRV/unbind
+sleep 1
+echo $DEV > $DRV/bind
+for i in 1 2 3 4 5 6 7 8 9 10; do
+	[ -e /sys/class/udc/$DEV ] && break
+	sleep 0.5
+done
+if [ -d $G ] && [ -z "$(cat $G/UDC)" ]; then
+	echo $DEV > $G/UDC
+fi
+sleep 2
+echo "usb-replug: UDC $(state)"

@@ -1,3 +1,14 @@
+rg55g1-bsp (0.1.9) trixie; urgency=medium
+
+  * USB device mode after a replug: the dwc3 controller suspends when the
+    cable is unplugged and does not come back when it is plugged in again
+    (the PC saw nothing until a reboot). A udev rule on the Type-C partner
+    runs usb-replug, which re-binds the dwc3-qcom driver when the UDC is
+    not "configured" 5 seconds after the plug (checked on the device:
+    the stuck controller is not always "not attached").
+
+ -- hako-os <hako@hako-os>  Tue, 24 Nov 2026 21:00:00 +0900
+
 rg55g1-bsp (0.1.7) trixie; urgency=medium
 
   * GPU: the session uses hako-mesa (Mesa 26.2.6 with Adreno 613 support)

@@ -1,0 +1,8 @@
+[Unit]
+Description=RG 55G1: bring USB device mode back after the cable is plugged in again
+Documentation=file:/usr/lib/rg55g1/usb-replug
+After=rg55g1-usb-gadget.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/rg55g1/usb-replug
