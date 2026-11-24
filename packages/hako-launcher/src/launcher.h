@@ -67,6 +67,8 @@ typedef struct {
 
 /* Read /usr/share/hako/apps/ *.app and /data/dev/apps/ *.app, sorted. */
 int apps_load(App *apps, int max);
+/* Changes when the app folders change (to reload the list). */
+unsigned long long apps_stamp(void);
 /* Start the app in its own process group; returns the pid or -1. */
 pid_t app_spawn(const App *a);
 

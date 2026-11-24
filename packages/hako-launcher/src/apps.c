@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 static const struct { const char *path; bool dev; } APP_DIRS[] = {
 	{ "/usr/share/hako/apps", false },
@@ -145,6 +146,21 @@ static int cmp_app(const void *pa, const void *pb)
 	if (a->order != b->order)
 		return a->order < b->order ? -1 : 1;
 	return strcmp(a->name, b->name);
+}
+
+/* a stamp of the app folders: changes when an .app file is added, removed or replaced
+ * (dpkg and most editors write a new file and rename it, which changes the folder's mtime) */
+unsigned long long apps_stamp(void)
+{
+	unsigned long long stamp = 0;
+	for (size_t d = 0; d < SDL_arraysize(APP_DIRS); d++) {
+		struct stat st;
+		if (stat(APP_DIRS[d].path, &st) == 0)
+			stamp = stamp * 1000003ULL + (unsigned long long)st.st_mtim.tv_sec * 1000000000ULL + (unsigned long long)st.st_mtim.tv_nsec;
+		else
+			stamp = stamp * 1000003ULL + 1;
+	}
+	return stamp;
 }
 
 int apps_load(App *apps, int max)

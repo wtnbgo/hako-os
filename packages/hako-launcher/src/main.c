@@ -149,6 +149,7 @@ typedef struct {
 	BtState bt;
 	int bt_sel, bt_top;
 	Uint64 bt_next;       /* next refresh of the device list */
+	unsigned long long apps_stamp; /* apps_stamp() of the loaded list */
 	Uint64 scan_until;    /* searching stops then */
 	BtDevice bt_target;   /* device of the "forget" dialog */
 	char info_lines[40][160];
@@ -295,6 +296,7 @@ static void apps_reload(Launcher *l)
 	char cur[64] = "";
 	if (l->sel_app < l->napps)
 		snprintf(cur, sizeof cur, "%s", l->apps[l->sel_app].id);
+	l->apps_stamp = apps_stamp();
 	l->napps = apps_load(l->apps, MAX_APPS);
 	l->sel_app = 0;
 	for (int i = 0; i < l->napps; i++)
@@ -1264,6 +1266,13 @@ int main(int argc, char **argv)
 			l.rep_next = now + 110;
 		}
 		if (now >= l.sys_next) {
+			/* an app was installed, removed or changed: reload the list (keeps the selection) */
+			const unsigned long long stamp = apps_stamp();
+			if (stamp != l.apps_stamp) {
+				l.apps_stamp = stamp;
+				apps_reload(&l);
+				icons_load(&l, s.ren);
+			}
 			sys_refresh(&l.sys);
 			if (!l.bt_screen && l.tab == TAB_SETTINGS)
 				bt_refresh(&l.bt);  /* on / off in the settings list */
