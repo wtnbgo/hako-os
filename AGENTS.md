@@ -18,7 +18,9 @@ Current board: Retroid Pocket Mini V1 (SM8250), board package `rpmini-bsp`.
 | `packages/hako-base/` | hako-base (first-boot data growing), hako-session (cage kiosk session, user `hako`), hako-dev |
 | `packages/hako-launcher/` | launcher + settings (C, SDL3). `.app` files register apps |
 | `packages/hako-sdl-hello/`, `hako-raylib-hello/`, `hako-love/` | samples / engines |
-| `packages/rpmini-bsp/` | everything board specific (ESP update, USB gadget, UCM, udev, pad mapping, rotation) |
+| `packages/hako-siv3d-games/`, `hako-raylib-classics/` | game collections (Siv3D samples, raylib classics), pad + touch |
+| `packages/hako-mesa/` | Mesa 26.2 (freedreno / turnip) in /usr/lib/hako/mesa, for the Adreno 613 |
+| `packages/rpmini-bsp/`, `rg55g1-bsp/` | everything board specific (ESP update, USB gadget, UCM, udev, pad mapping, rotation) |
 | `kernel/` | kernel .deb (pinned upstream + ROCKNIX patches) |
 | `elbe/<board>-<flavor>.xml` | image definitions |
 | `scripts/` | `build-packages.sh [pkg..]` (skips unchanged versions), `publish-repo.sh`, `dev-update.sh [pkg..]`, `[BOARD=<board>] build-image.sh <flavor>` (needs the kernel .deb from `kernel/build.sh` first) |

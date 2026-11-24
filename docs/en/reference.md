@@ -54,7 +54,7 @@ Status as of 2026-11-20.
 | `kernel/SOURCE.pin` | Source versions used (ROCKNIX commit, kernel version and sha256, linux-firmware tag, package version) |
 | `kernel/config/*.config` | Fragments layered on top of ROCKNIX's config (for Debian's initramfs, USB gadget, etc.) |
 | `kernel/firmware-<SOC>.list` | Firmware built into the kernel (GPU, DSP, etc.) |
-| `packages/` | Sources of our own packages (tables below). `hako-base` (hako-base / hako-session / hako-dev), `hako-launcher`, `hako-sdl-hello`, `hako-love`, `hako-raylib-hello`, `rpmini-bsp` |
+| `packages/` | Sources of our own packages (tables below). `hako-base` (hako-base / hako-session / hako-dev), `hako-launcher`, `hako-sdl-hello`, `hako-love`, `hako-raylib-hello`, `hako-raylib-classics`, `hako-siv3d-games`, `hako-mesa`, `rpmini-bsp`, `rg55g1-bsp` |
 | `packages/hako-love/love`, `packages/hako-raylib-hello/raylib` | Upstream sources of LÖVE and raylib (git submodules, pinned versions). Fetch with `git submodule update --init` |
 | `samples/` | Samples that are not packaged (placed in `/data/dev/apps/` to run). `love-hello/` checks that LÖVE works |
 | `repo/` | reprepro apt repository. Only the configuration (`conf/`) is under git; the contents are generated |
@@ -86,6 +86,7 @@ Status as of 2026-11-20.
 
 | Contents | Role |
 |---|---|
+| `/usr/lib/hako/rtc-offset` and `hako-rtc-offset.service` (`-save.timer` / `-save.path`) | Keeps the clock on boards whose RTC Linux cannot set (the PMIC RTC of the RG 55G1): saves "clock - RTC" to `/var/lib/hako/rtc-offset` (right after an NTP sync, hourly, at shutdown) and sets the clock to "RTC + offset" early at boot. Does nothing where the RTC keeps the time (Retroid Pocket Mini). NTP: the `systemd-timesyncd` dependency |
 | `/usr/lib/hako/grow-data` and `hako-grow-data.service` | On first boot, grows the partition labeled `data` to the end of the disk (`sgdisk -e` → `growpart` → `resize2fs`). When done, creates `/var/lib/hako-base/grow-data.done` and never runs again. Does not run at install time |
 
 **hako-dev**: for development (`packages/hako-base/`). Not included in releases.
@@ -148,6 +149,29 @@ The old names (rpmini-session / rpmini-dev / rpmini-launcher / rpmini-sdl-hello)
   also supports `HAKO_PAD_LAYOUT=label`), sticks, touch and FPS. ABXY play sounds. START+SELECT quits.
 - raylib's button names (`GAMEPAD_BUTTON_RIGHT_FACE_DOWN` etc.) are positions, the same as SDL.
 - Verified on the device (2026-11-20): movement, jump, camera, zoom, sound, touch, quit.
+
+**hako-raylib-classics**: the 12 classic games of raylib (classics of raysan5/raylib-games, zlib) in one app (`packages/hako-raylib-classics/`).
+
+- The original sources (`classics/`) are unchanged and compiled through the wrappers in `src/games/` (the macros of `src/hk.h` replace `main()`,
+  drawing and input). Each game draws at its own size (800x450 etc.) into a render texture scaled to the screen.
+- Input (`src/hk_input.c`): arrow keys = d-pad / stick / on-screen d-pad, Space and Enter = A, P = START. Mouse games: touch is the mouse, the stick moves a pointer.
+- Installed in `/usr/lib/hako/raylib-classics/`; `licenses/` (the games, raylib, the notices of the third-party code built into raylib) is shown from the menu.
+- raylib is the submodule of `hako-raylib-hello`, built in statically.
+
+**hako-siv3d-games**: the 22 game samples of Siv3D in one app (`packages/hako-siv3d-games/`).
+
+- Built with the SDL3 port of OpenSiv3D (wtnbgo/OpenSiv3D `develop_sdl3`, pinned to a commit in `siv3d-app.json`) through
+  `siv3d_app.py --target rpmini stage` (needs docker and the deckbuild-rpmini image). `/usr/lib/hako/siv3d-games/` holds the program, SDL3 and the Siv3D resources (47 MB).
+- Input is `src/Input.hpp` (pad, keyboard, mouse, touch; A / B as printed). It has a menu, controls help for each game and a license screen.
+- 1-12, 21 and 22 are the Siv3D documentation samples (MIT), 13-20 Siv3D-Samples and Reputeless/games (CC0); the top of each file says where it comes from and what changed.
+- Cookie Clicker saves to `~/.local/share/hako-siv3d-games/` (user hako).
+
+**hako-mesa**: Mesa with Adreno 613 support (RG 55G1) (`packages/hako-mesa/`).
+
+- Debian's Mesa (25.0 in trixie, 26.1 in backports) does not know the Adreno 613 (added in Mesa 26.2). Built from Debian's Mesa 26.2.6 orig tarball
+  (version and sha256 pinned): only freedreno (GL / GLES / EGL / GBM) and turnip (Vulkan), cross-compiled without LLVM.
+- Installed in `/usr/lib/hako/mesa`; Debian's Mesa is not replaced. Only programs that source `/usr/lib/hako/mesa/env.sh` (LD_LIBRARY_PATH, the glvnd EGL
+  vendor file, the Vulkan ICD) use it; the session defaults of rg55g1-bsp do. Drop it once Debian's Mesa is 26.2 or later.
 
 **hako-launcher**: a launcher that starts apps from a list, doubling as system settings (`packages/hako-launcher/`). Also used in releases.
 
@@ -490,7 +514,7 @@ small (neither krkrz nor Siv3D has a rotation mechanism).
   - Kirikiri Z: startup option `-fullscreen=yes` (makes the first window shown full-screen).
     Example: `HAKO_APP_ARGS="/data/dev/<title>/data -fullscreen=yes"`.
   - Siv3D: environment variable `SIV3D_FULLSCREEN=1` (supported by the SDL3 version of Siv3D). Enabled by default in `/etc/default/hako-session`.
-  - Verified: krkrz's core demo and the Siv3D template app. KAG-based game data has not been tested on Linux at all yet, so that is separate.
+  - Verified: krkrz's core demo, the Siv3D template app and the Siv3D game collection (`hako-siv3d-games`, 22 games). KAG-based game data has not been tested on Linux at all yet, so that is separate.
 - Checking the screen: `runuser -u hako -- env XDG_RUNTIME_DIR=/run/user/$(id -u hako) WAYLAND_DISPLAY=wayland-0 grim /tmp/s.png`
 
 ### Development loop and debugging

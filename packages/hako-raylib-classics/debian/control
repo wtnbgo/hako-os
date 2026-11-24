@@ -1,0 +1,18 @@
+Source: hako-raylib-classics
+Section: games
+Priority: optional
+Maintainer: hako-os <hako@hako-os>
+Build-Depends: debhelper-compat (= 13), cmake, pkgconf, libsdl3-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: hako-raylib-classics
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: raylib classic games for hako (raysan5/raylib-games classics)
+ The twelve classic games of raysan5/raylib-games (Arkanoid, Asteroids, Floppy,
+ Gold Fever, Gorilas, Missile Commander, Pang, Platformer, Snake, Space
+ Invaders, Tetris and Asteroids Survival) in one app with a menu, playable with
+ the built-in pad of a handheld and with touch (on-screen pad). raylib is built
+ in statically from the hako-raylib-hello submodule. The licenses are shown
+ from the menu. Registered in hako-launcher as "raylib クラシック".

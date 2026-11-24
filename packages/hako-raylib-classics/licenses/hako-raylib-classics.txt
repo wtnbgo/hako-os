@@ -1,0 +1,4 @@
+hako-raylib-classics (the menu, the pad / touch input and the wrappers)
+https://github.com/wtnbgo/hako-os/tree/main/packages/hako-raylib-classics
+
+MIT License, like the rest of hako-os (see LICENSE of hako-os).

@@ -91,6 +91,7 @@ Each one lets you check the gamepad, touch, sound and FPS. Use them as templates
 |---|---|---|---|
 | SDL3 sample | C / SDL_Renderer | `packages/hako-sdl-hello/` | Included in the image (`hako-sdl-hello`) |
 | raylib sample | C / OpenGL | `packages/hako-raylib-hello/` | Included in the image (`hako-raylib-hello`) |
+| raylib classics | C / OpenGL | `packages/hako-raylib-classics/` | Included in the image (`hako-raylib-classics`) |
 | LÖVE sample | Lua / Vulkan | `samples/love-hello/` | The runtime `hako-love` is in the image. Transfer the sample (see below) |
 | Siv3D game collection | C++ / OpenGL | `packages/hako-siv3d-games/` | Included in the image (`hako-siv3d-games`) |
 | Siv3D | C++ / OpenGL | (start from siv3d_app; links below) | Transfer and register with a `.app` |
@@ -110,6 +111,21 @@ Links: [raylib](https://www.raylib.com/) / [cheatsheet](https://www.raylib.com/c
 - Pins raylib 6.2 as a submodule and links it statically, configured to run on SDL3 (`PLATFORM=SDL` in `CMakeLists.txt`).
 - 3D scene: left stick to move, bottom button to jump, right stick for the camera, L2/R2 to zoom.
 - To make your own game with raylib, the quickest way is to copy this whole directory and rename it.
+
+
+#### raylib classics (`hako-raylib-classics`)
+
+The twelve classic games by raylib's author ([classics of raysan5/raylib-games](https://github.com/raysan5/raylib-games/tree/master/classics), zlib)
+in one app: chosen from a menu and played with the pad and touch.
+
+- The original sources are in `classics/` unmodified and are compiled through the wrappers in `src/games/`. The macros in
+  `src/hk.h` rename their `main()`, send `BeginDrawing()` / `EndDrawing()` to a render texture per game and the keyboard /
+  mouse queries to `src/hk_input.c`.
+- Input: arrow keys = d-pad / stick, Space and Enter = A (as printed), P (pause) = START. Touching the screen shows an
+  on-screen d-pad and A. In the mouse games (Gorilas, Missile Commander) touch is the mouse, and the stick moves a pointer that A clicks.
+- START+SELECT / HOME / Esc / MENU (top left) return to the menu. The licenses (the games, raylib, the notices of the
+  third-party code raylib compiles in) are shown from the menu; `licenses/make-licenses.py` regenerates the notices after a raylib update.
+- raylib is the submodule of `hako-raylib-hello`, built in statically. Its default font has no Japanese, so the texts are English.
 
 ### LÖVE sample (`samples/love-hello`)
 

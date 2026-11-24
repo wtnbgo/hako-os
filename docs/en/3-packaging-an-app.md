@@ -18,9 +18,9 @@ The quickest way to get a template is to copy a sample.
 
 | Kind of app | Template | Notes |
 |---|---|---|
-| C / C++ built from source | `packages/hako-sdl-hello/` (Makefile), `packages/hako-raylib-hello/` (CMake + submodule) | debhelper builds it as-is |
+| C / C++ built from source | `packages/hako-sdl-hello/` (Makefile), `packages/hako-raylib-hello/` (CMake + submodule), `packages/hako-raylib-classics/` (upstream sources used unchanged) | debhelper builds it as-is |
 | LÖVE game | (example below) | `Depends: hako-love`; just include the game folder or `.love` |
-| Prebuilt executable (Siv3D, Kirikiri Z, etc.) | (example below) | `Architecture: arm64`; just install the files. Watch out for bundled libraries |
+| Prebuilt executable (Siv3D, Kirikiri Z, etc.) | (example below). Siv3D: `packages/hako-siv3d-games/` (debian/rules runs siv3d_app.py) | `Architecture: arm64`; just install the files. Watch out for bundled libraries |
 
 Where things go:
 

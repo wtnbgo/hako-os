@@ -1,0 +1,2068 @@
+Third-party code compiled into raylib (raylib/src/external)
+The license notices as found in each file.
+
+
+========================================================================
+cgltf.h
+========================================================================
+
+/**
+ * cgltf - a single-file glTF 2.0 parser written in C99.
+ *
+ * Version: 1.15
+ *
+ * Website: https://github.com/jkuhlmann/cgltf
+ *
+ * Distributed under the MIT License, see notice at the end of this file.
+ *
+ * Building:
+ * Include this file where you need the struct and function
+ * declarations. Have exactly one source file where you define
+ * `CGLTF_IMPLEMENTATION` before including this file to get the
+ * function definitions.
+ *
+ * Reference:
+ * `cgltf_result cgltf_parse(const cgltf_options*, const void*,
+ * cgltf_size, cgltf_data**)` parses both glTF and GLB data. If
+ * this function returns `cgltf_result_success`, you have to call
+ * `cgltf_free()` on the created `cgltf_data*` variable.
+ * Note that contents of external files for buffers and images are not
+ * automatically loaded. You'll need to read these files yourself using
+ * URIs in the `cgltf_data` structure.
+ *
+ * `cgltf_options` is the struct passed to `cgltf_parse()` to control
+ * parts of the parsing process. You can use it to force the file type
+ * and provide memory allocation as well as file operation callbacks.
+ * Should be zero-initialized to trigger default behavior.
+ *
+ * `cgltf_data` is the struct allocated and filled by `cgltf_parse()`.
+ * It generally mirrors the glTF format as described by the spec (see
+ * https://github.com/KhronosGroup/glTF/tree/master/specification/2.0).
+ *
+ * `void cgltf_free(cgltf_data*)` frees the allocated `cgltf_data`
+ * variable.
+ *
+ * `cgltf_result cgltf_load_buffers(const cgltf_options*, cgltf_data*,
+ * const char* gltf_path)` can be optionally called to open and read buffer
+ * files using the `FILE*` APIs. The `gltf_path` argument is the path to
+ * the original glTF file, which allows the parser to resolve the path to
+ * buffer files.
+ *
+ * `cgltf_result cgltf_load_buffer_base64(const cgltf_options* options,
+ * cgltf_size size, const char* base64, void** out_data)` decodes
+ * base64-encoded data content. Used internally by `cgltf_load_buffers()`.
+ * This is useful when decoding data URIs in images.
+ *
+ * `cgltf_result cgltf_parse_file(const cgltf_options* options, const
+ * char* path, cgltf_data** out_data)` can be used to open the given
+ * file using `FILE*` APIs and parse the data using `cgltf_parse()`.
+ *
+ * `cgltf_result cgltf_validate(cgltf_data*)` can be used to do additional
+ * checks to make sure the parsed glTF data is valid.
+ *
+ * `cgltf_node_transform_local` converts the translation / rotation / scale properties of a node
+ * into a mat4.
+ *
+ * `cgltf_node_transform_world` calls `cgltf_node_transform_local` on every ancestor in order
+ * to compute the root-to-node transformation.
+ *
+ * `cgltf_accessor_unpack_floats` reads in the data from an accessor, applies sparse data (if any),
+ * and converts them to floating point. Assumes that `cgltf_load_buffers` has already been called.
+ * By passing null for the output pointer, users can find out how many floats are required in the
+ * output buffer.
+ *
+ * `cgltf_accessor_unpack_indices` reads in the index data from an accessor. Assumes that
+ * `cgltf_load_buffers` has already been called. By passing null for the output pointer, users can
+ * find out how many indices are required in the output buffer. Returns 0 if the accessor is
+ * sparse or if the output component size is less than the accessor's component size.
+ *
+ * `cgltf_num_components` is a tiny utility that tells you the dimensionality of
+ * a certain accessor type. This can be used before `cgltf_accessor_unpack_floats` to help allocate
+ * the necessary amount of memory. `cgltf_component_size` and `cgltf_calc_size` exist for
+ * similar purposes.
+ *
+ * `cgltf_accessor_read_float` reads a certain element from a non-sparse accessor and converts it to
+ * floating point, assuming that `cgltf_load_buffers` has already been called. The passed-in element
+ * size is the number of floats in the output buffer, which should be in the range [1, 16]. Returns
+ * false if the passed-in element_size is too small, or if the accessor is sparse.
+ *
+ * `cgltf_accessor_read_uint` is similar to its floating-point counterpart, but limited to reading
+ * vector types and does not support matrix types. The passed-in element size is the number of uints
+ * in the output buffer, which should be in the range [1, 4]. Returns false if the passed-in
+ * element_size is too small, or if the accessor is sparse.
+ *
+ * `cgltf_accessor_read_index` is similar to its floating-point counterpart, but it returns size_t
+ * and only works with single-component data types.
+ *
+ * `cgltf_copy_extras_json` allows users to retrieve the "extras" data that can be attached to many
+ * glTF objects (which can be arbitrary JSON data). This is a legacy function, consider using
+ * cgltf_extras::data directly instead. You can parse this data using your own JSON parser
+ * or, if you've included the cgltf implementation using the integrated JSMN JSON parser.
+ */
+
+/*
+ * -- jsmn.h start --
+ * Source: https://github.com/zserge/jsmn
+ * License: MIT
+ */
+
+/*
+ * -- jsmn.c start --
+ * Source: https://github.com/zserge/jsmn
+ * License: MIT
+ *
+ * Copyright (c) 2010 Serge A. Zaitsev
+
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+/* cgltf is distributed under MIT license:
+ *
+ * Copyright (c) 2018-2021 Johannes Kuhlmann
+
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+========================================================================
+dr_flac.h
+========================================================================
+
+/*
+FLAC audio decoder. Choice of public domain or MIT-0. See license statements at the end of this file.
+dr_flac - v0.13.4 - TBD
+
+David Reid - mackron@gmail.com
+
+GitHub: https://github.com/mackron/dr_libs
+*/
+
+  - Change license to choice of public domain or MIT-0.
+
+v0.11.5 - 2019-04-19
+  - Fix a compiler error with GCC.
+
+v0.11.4 - 2019-04-17
+  - Fix some warnings with GCC when compiling with -std=c99.
+
+v0.11.3 - 2019-04-07
+  - Silence warnings with GCC.
+
+v0.11.2 - 2019-03-10
+  - Fix a warning.
+
+v0.11.1 - 2019-02-17
+  - Fix a potential bug with seeking.
+
+v0.11.0 - 2018-12-16
+  - API CHANGE: Deprecated drflac_read_s32(), drflac_read_s16() and drflac_read_f32() and replaced them with
+    drflac_read_pcm_frames_s32(), drflac_read_pcm_frames_s16() and drflac_read_pcm_frames_f32(). The new APIs take
+    and return PCM frame counts instead of sample counts. To upgrade you will need to change the input count by
+    dividing it by the channel count, and then do the same with the return value.
+  - API_CHANGE: Deprecated drflac_seek_to_sample() and replaced with drflac_seek_to_pcm_frame(). Same rules as
+    the changes to drflac_read_*() apply.
+  - API CHANGE: Deprecated drflac_open_and_decode_*() and replaced with drflac_open_*_and_read_*(). Same rules as
+    the changes to drflac_read_*() apply.
+  - Optimizations.
+
+v0.10.0 - 2018-09-11
+  - Remove the DR_FLAC_NO_WIN32_IO option and the Win32 file IO functionality. If you need to use Win32 file IO you
+    need to do it yourself via the callback API.
+  - Fix the clang build.
+  - Fix undefined behavior.
+  - Fix errors with CUESHEET metdata blocks.
+  - Add an API for iterating over each cuesheet track in the CUESHEET metadata block. This works the same way as the
+    Vorbis comment API.
+  - Other miscellaneous bug fixes, mostly relating to invalid FLAC streams.
+  - Minor optimizations.
+
+v0.9.11 - 2018-08-29
+  - Fix a bug with sample reconstruction.
+
+v0.9.10 - 2018-08-07
+  - Improve 64-bit detection.
+
+
+/*
+This software is available as a choice of the following licenses. Choose
+whichever you prefer.
+
+===============================================================================
+ALTERNATIVE 1 - Public Domain (www.unlicense.org)
+===============================================================================
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
+
+===============================================================================
+ALTERNATIVE 2 - MIT No Attribution
+===============================================================================
+Copyright 2023 David Reid
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+========================================================================
+dr_mp3.h
+========================================================================
+
+/*
+MP3 audio decoder. Choice of public domain or MIT-0. See license statements at the end of this file.
+dr_mp3 - v0.7.4 - TBD
+
+David Reid - mackron@gmail.com
+
+GitHub: https://github.com/mackron/dr_libs
+
+Based on minimp3 (https://github.com/lieff/minimp3) which is where the real work was done. See the bottom of this file for differences between minimp3 and dr_mp3.
+*/
+
+  - Change license to choice of public domain or MIT-0.
+
+v0.4.2 - 2019-02-21
+  - Fix a warning.
+
+v0.4.1 - 2018-12-30
+  - Fix a warning.
+
+v0.4.0 - 2018-12-16
+  - API CHANGE: Rename some APIs:
+    - drmp3_read_f32 -> to drmp3_read_pcm_frames_f32
+    - drmp3_seek_to_frame -> drmp3_seek_to_pcm_frame
+    - drmp3_open_and_decode_f32 -> drmp3_open_and_read_pcm_frames_f32
+    - drmp3_open_and_decode_memory_f32 -> drmp3_open_memory_and_read_pcm_frames_f32
+    - drmp3_open_and_decode_file_f32 -> drmp3_open_file_and_read_pcm_frames_f32
+  - Add drmp3_get_pcm_frame_count().
+  - Add drmp3_get_mp3_frame_count().
+  - Improve seeking performance.
+
+v0.3.2 - 2018-09-11
+  - Fix a couple of memory leaks.
+  - Bring up to date with minimp3.
+
+v0.3.1 - 2018-08-25
+  - Fix C++ build.
+
+v0.3.0 - 2018-08-25
+  - Bring up to date with minimp3. This has a minor API change: the "pcm" parameter of drmp3dec_decode_frame() has
+    been changed from short* to void* because it can now output both s16 and f32 samples, depending on whether or
+    not the DR_MP3_FLOAT_OUTPUT option is set.
+
+v0.2.11 - 2018-08-08
+  - Fix a bug where the last part of a file is not read.
+
+v0.2.10 - 2018-08-07
+  - Improve 64-bit detection.
+
+v0.2.9 - 2018-08-05
+  - Fix C++ build on older versions of GCC.
+  - Bring up to date with minimp3.
+
+v0.2.8 - 2018-08-02
+  - Fix compilation errors with older versions of GCC.
+
+v0.2.7 - 2018-07-13
+
+/*
+This software is available as a choice of the following licenses. Choose
+whichever you prefer.
+
+===============================================================================
+ALTERNATIVE 1 - Public Domain (www.unlicense.org)
+===============================================================================
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
+
+===============================================================================
+ALTERNATIVE 2 - MIT No Attribution
+===============================================================================
+Copyright 2023 David Reid
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+/*
+    https://github.com/lieff/minimp3
+    To the extent possible under law, the author(s) have dedicated all copyright and related and neighboring rights to this software to the public domain worldwide.
+    This software is distributed without any warranty.
+    See <http://creativecommons.org/publicdomain/zero/1.0/>.
+*/
+
+========================================================================
+dr_wav.h
+========================================================================
+
+/*
+WAV audio loader and writer. Choice of public domain or MIT-0. See license statements at the end of this file.
+dr_wav - v0.14.6 - TBD
+
+David Reid - mackron@gmail.com
+
+GitHub: https://github.com/mackron/dr_libs
+*/
+
+  - Change license to choice of public domain or MIT-0.
+
+v0.9.0 - 2018-12-16
+  - API CHANGE: Add new reading APIs for reading by PCM frames instead of samples. Old APIs have been deprecated and
+    will be removed in v0.10.0. Deprecated APIs and their replacements:
+      drwav_read()                     -> drwav_read_pcm_frames()
+      drwav_read_s16()                 -> drwav_read_pcm_frames_s16()
+      drwav_read_f32()                 -> drwav_read_pcm_frames_f32()
+      drwav_read_s32()                 -> drwav_read_pcm_frames_s32()
+      drwav_seek_to_sample()           -> drwav_seek_to_pcm_frame()
+      drwav_write()                    -> drwav_write_pcm_frames()
+      drwav_open_and_read_s16()        -> drwav_open_and_read_pcm_frames_s16()
+      drwav_open_and_read_f32()        -> drwav_open_and_read_pcm_frames_f32()
+      drwav_open_and_read_s32()        -> drwav_open_and_read_pcm_frames_s32()
+      drwav_open_file_and_read_s16()   -> drwav_open_file_and_read_pcm_frames_s16()
+      drwav_open_file_and_read_f32()   -> drwav_open_file_and_read_pcm_frames_f32()
+      drwav_open_file_and_read_s32()   -> drwav_open_file_and_read_pcm_frames_s32()
+      drwav_open_memory_and_read_s16() -> drwav_open_memory_and_read_pcm_frames_s16()
+      drwav_open_memory_and_read_f32() -> drwav_open_memory_and_read_pcm_frames_f32()
+      drwav_open_memory_and_read_s32() -> drwav_open_memory_and_read_pcm_frames_s32()
+      drwav::totalSampleCount          -> drwav::totalPCMFrameCount
+  - API CHANGE: Rename drwav_open_and_read_file_*() to drwav_open_file_and_read_*().
+  - API CHANGE: Rename drwav_open_and_read_memory_*() to drwav_open_memory_and_read_*().
+  - Add built-in support for smpl chunks.
+  - Add support for firing a callback for each chunk in the file at initialization time.
+    - This is enabled through the drwav_init_ex(), etc. family of APIs.
+  - Handle invalid FMT chunks more robustly.
+
+v0.8.5 - 2018-09-11
+  - Const correctness.
+  - Fix a potential stack overflow.
+
+v0.8.4 - 2018-08-07
+  - Improve 64-bit detection.
+
+v0.8.3 - 2018-08-05
+  - Fix C++ build on older versions of GCC.
+
+v0.8.2 - 2018-08-02
+  - Fix some big-endian bugs.
+
+v0.8.1 - 2018-06-29
+  - Add support for sequential writing APIs.
+  - Disable seeking in write mode.
+  - Fix bugs with Wave64.
+
+/*
+This software is available as a choice of the following licenses. Choose
+whichever you prefer.
+
+===============================================================================
+ALTERNATIVE 1 - Public Domain (www.unlicense.org)
+===============================================================================
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
+
+===============================================================================
+ALTERNATIVE 2 - MIT No Attribution
+===============================================================================
+Copyright 2023 David Reid
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+========================================================================
+glad.h
+========================================================================
+
+/*
+** Copyright (c) 2008-2018 The Khronos Group Inc.
+**
+** Permission is hereby granted, free of charge, to any person obtaining a
+** copy of this software and/or associated documentation files (the
+** "Materials"), to deal in the Materials without restriction, including
+** without limitation the rights to use, copy, modify, merge, publish,
+** distribute, sublicense, and/or sell copies of the Materials, and to
+** permit persons to whom the Materials are furnished to do so, subject to
+** the following conditions:
+**
+** The above copyright notice and this permission notice shall be included
+** in all copies or substantial portions of the Materials.
+**
+** THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+** IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+** CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+*/
+
+========================================================================
+glad_gles2.h
+========================================================================
+
+/**
+ * Loader generated by glad 2.0.2 on Wed Dec 28 13:28:51 2022
+ *
+ * SPDX-License-Identifier: (WTFPL OR CC0-1.0) AND Apache-2.0
+ *
+ * Generator: C/C++
+ * Specification: gl
+ * Extensions: 170
+ *
+ * APIs:
+ *  - gles2=2.0
+ *
+ * Options:
+ *  - ALIAS = False
+ *  - DEBUG = False
+ *  - HEADER_ONLY = True
+ *  - LOADER = False
+ *  - MX = False
+ *  - ON_DEMAND = False
+ *
+ * Commandline:
+ *    --api='gles2=2.0' --extensions='GL_EXT_EGL_image_array,GL_EXT_EGL_image_storage,GL_EXT_EGL_image_storage_compression,GL_EXT_YUV_target,GL_EXT_base_instance,GL_EXT_blend_func_extended,GL_EXT_blend_minmax,GL_EXT_buffer_storage,GL_EXT_clear_texture,GL_EXT_clip_control,GL_EXT_clip_cull_distance,GL_EXT_color_buffer_float,GL_EXT_color_buffer_half_float,GL_EXT_conservative_depth,GL_EXT_copy_image,GL_EXT_debug_label,GL_EXT_debug_marker,GL_EXT_depth_clamp,GL_EXT_discard_framebuffer,GL_EXT_disjoint_timer_query,GL_EXT_draw_buffers,GL_EXT_draw_buffers_indexed,GL_EXT_draw_elements_base_vertex,GL_EXT_draw_instanced,GL_EXT_draw_transform_feedback,GL_EXT_external_buffer,GL_EXT_float_blend,GL_EXT_fragment_shading_rate,GL_EXT_geometry_point_size,GL_EXT_geometry_shader,GL_EXT_gpu_shader5,GL_EXT_instanced_arrays,GL_EXT_map_buffer_range,GL_EXT_memory_object,GL_EXT_memory_object_fd,GL_EXT_memory_object_win32,GL_EXT_multi_draw_arrays,GL_EXT_multi_draw_indirect,GL_EXT_multisampled_compatibility,GL_EXT_multisampled_render_to_texture,GL_EXT_multisampled_render_to_texture2,GL_EXT_multiview_draw_buffers,GL_EXT_multiview_tessellation_geometry_shader,GL_EXT_multiview_texture_multisample,GL_EXT_multiview_timer_query,GL_EXT_occlusion_query_boolean,GL_EXT_polygon_offset_clamp,GL_EXT_post_depth_coverage,GL_EXT_primitive_bounding_box,GL_EXT_protected_textures,GL_EXT_pvrtc_sRGB,GL_EXT_raster_multisample,GL_EXT_read_format_bgra,GL_EXT_render_snorm,GL_EXT_robustness,GL_EXT_sRGB,GL_EXT_sRGB_write_control,GL_EXT_semaphore,GL_EXT_semaphore_fd,GL_EXT_semaphore_win32,GL_EXT_separate_depth_stencil,GL_EXT_separate_shader_objects,GL_EXT_shader_framebuffer_fetch,GL_EXT_shader_framebuffer_fetch_non_coherent,GL_EXT_shader_group_vote,GL_EXT_shader_implicit_conversions,GL_EXT_shader_integer_mix,GL_EXT_shader_io_blocks,GL_EXT_shader_non_constant_global_initializers,GL_EXT_shader_pixel_local_storage,GL_EXT_shader_pixel_local_storage2,GL_EXT_shader_samples_identical,GL_EXT_shader_texture_lod,GL_EXT_shadow_samplers,GL_EXT_sparse_texture,GL_EXT_sparse_texture2,GL_EXT_tessellation_point_size,GL_EXT_tessellation_shader,GL_EXT_texture_border_clamp,GL_EXT_texture_buffer,GL_EXT_texture_compression_astc_decode_mode,GL_EXT_texture_compression_bptc,GL_EXT_texture_compression_dxt1,GL_EXT_texture_compression_rgtc,GL_EXT_texture_compression_s3tc,GL_EXT_texture_compression_s3tc_srgb,GL_EXT_texture_cube_map_array,GL_EXT_texture_filter_anisotropic,GL_EXT_texture_filter_minmax,GL_EXT_texture_format_BGRA8888,GL_EXT_texture_format_sRGB_override,GL_EXT_texture_mirror_clamp_to_edge,GL_EXT_texture_norm16,GL_EXT_texture_query_lod,GL_EXT_texture_rg,GL_EXT_texture_sRGB_R8,GL_EXT_texture_sRGB_RG8,GL_EXT_texture_sRGB_decode,GL_EXT_texture_shadow_lod,GL_EXT_texture_storage,GL_EXT_texture_storage_compression,GL_EXT_texture_type_2_10_10_10_REV,GL_EXT_texture_view,GL_EXT_unpack_subimage,GL_EXT_win32_keyed_mutex,GL_EXT_window_rectangles,GL_KHR_blend_equation_advanced,GL_KHR_blend_equation_advanced_coherent,GL_KHR_context_flush_control,GL_KHR_debug,GL_KHR_no_error,GL_KHR_parallel_shader_compile,GL_KHR_robust_buffer_access_behavior,GL_KHR_robustness,GL_KHR_shader_subgroup,GL_KHR_texture_compression_astc_hdr,GL_KHR_texture_compression_astc_ldr,GL_KHR_texture_compression_astc_sliced_3d,GL_OES_EGL_image,GL_OES_EGL_image_external,GL_OES_EGL_image_external_essl3,GL_OES_compressed_ETC1_RGB8_sub_texture,GL_OES_compressed_ETC1_RGB8_texture,GL_OES_compressed_paletted_texture,GL_OES_copy_image,GL_OES_depth24,GL_OES_depth32,GL_OES_depth_texture,GL_OES_draw_buffers_indexed,GL_OES_draw_elements_base_vertex,GL_OES_element_index_uint,GL_OES_fbo_render_mipmap,GL_OES_fragment_precision_high,GL_OES_geometry_point_size,GL_OES_geometry_shader,GL_OES_get_program_binary,GL_OES_gpu_shader5,GL_OES_mapbuffer,GL_OES_packed_depth_stencil,GL_OES_primitive_bounding_box,GL_OES_required_internalformat,GL_OES_rgb8_rgba8,GL_OES_sample_shading,GL_OES_sample_variables,GL_OES_shader_image_atomic,GL_OES_shader_io_blocks,GL_OES_shader_multisample_interpolation,GL_OES_standard_derivatives,GL_OES_stencil1,GL_OES_stencil4,GL_OES_surfaceless_context,GL_OES_tessellation_point_size,GL_OES_tessellation_shader,GL_OES_texture_3D,GL_OES_texture_border_clamp,GL_OES_texture_buffer,GL_OES_texture_compression_astc,GL_OES_texture_cube_map_array,GL_OES_texture_float,GL_OES_texture_float_linear,GL_OES_texture_half_float,GL_OES_texture_half_float_linear,GL_OES_texture_npot,GL_OES_texture_stencil8,GL_OES_texture_storage_multisample_2d_array,GL_OES_texture_view,GL_OES_vertex_array_object,GL_OES_vertex_half_float,GL_OES_vertex_type_10_10_10_2,GL_OES_viewport_array' c --header-only
+ *
+ * Online:
+ *    http://glad.sh/#api=gles2%3D2.0&generator=c&options=HEADER_ONLY
+ *
+ */
+
+/*
+** Copyright (c) 2008-2018 The Khronos Group Inc.
+**
+** Permission is hereby granted, free of charge, to any person obtaining a
+** copy of this software and/or associated documentation files (the
+** "Materials"), to deal in the Materials without restriction, including
+** without limitation the rights to use, copy, modify, merge, publish,
+** distribute, sublicense, and/or sell copies of the Materials, and to
+** permit persons to whom the Materials are furnished to do so, subject to
+** the following conditions:
+**
+** The above copyright notice and this permission notice shall be included
+** in all copies or substantial portions of the Materials.
+**
+** THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+** IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+** CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+*/
+
+/**
+ * SPDX-License-Identifier: (WTFPL OR CC0-1.0) AND Apache-2.0
+ */
+
+========================================================================
+jar_mod.h
+========================================================================
+
+// jar_mod.h - v0.01 - public domain C0 - Joshua Reisenauer
+//
+// HISTORY:
+//
+//   v0.01  2016-03-12  Setup
+//
+//
+// USAGE:
+//
+// In ONE source file, put:
+//
+//    #define JAR_MOD_IMPLEMENTATION
+//    #include "jar_mod.h"
+//
+// Other source files should just include jar_mod.h
+//
+// SAMPLE CODE:
+// jar_mod_context_t modctx;
+// short samplebuff[4096];
+// bool bufferFull = false;
+// int intro_load(void)
+// {
+//     jar_mod_init(&modctx);
+//     jar_mod_load_file(&modctx, "file.mod");
+//     return 1;
+// }
+// int intro_unload(void)
+// {
+//     jar_mod_unload(&modctx);
+//     return 1;
+// }
+// int intro_tick(long counter)
+// {
+//     if(!bufferFull)
+//     {
+//         jar_mod_fillbuffer(&modctx, samplebuff, 4096, 0);
+//         bufferFull=true;
+//     }
+//     if(IsKeyDown(KEY_ENTER))
+//         return 1;
+//     return 0;
+// }
+//
+//
+// LISCENSE:
+//
+// Written by: Jean-François DEL NERO (http://hxc2001.com/) <Email : jeanfrancoisdelnero <> free.fr>
+// Adapted to jar_mod by: Joshua Adam Reisenauer <kd7tck@gmail.com>
+// This program is free software. It comes without any warranty, to the
+// extent permitted by applicable law. You can redistribute it and/or
+// modify it under the terms of the Do What The Fuck You Want To Public
+// License, Version 2, as published by Sam Hocevar. See
+// http://sam.zoy.org/wtfpl/COPYING for more details.
+///////////////////////////////////////////////////////////////////////////////////
+// HxCMOD Core API:
+// -------------------------------------------
+// int  jar_mod_init(jar_mod_context_t * modctx)
+//
+// - Initialize the jar_mod_context_t buffer. Must be called before doing anything else.
+//   Return 1 if success. 0 in case of error.
+// -------------------------------------------
+// mulong jar_mod_load_file(jar_mod_context_t * modctx, const char* filename)
+//
+// - "Load" a MOD from file, context must already be initialized.
+//   Return size of file in bytes.
+// -------------------------------------------
+// void jar_mod_fillbuffer( jar_mod_context_t * modctx, short * outbuffer, unsigned long nbsample, jar_mod_tracker_buffer_state * trkbuf )
+//
+// - Generate and return the next samples chunk to outbuffer.
+//   nbsample specify the number of stereo 16bits samples you want.
+//   The output format is by default signed 48000Hz 16-bit Stereo PCM samples, otherwise it is changed with jar_mod_setcfg().
+//   The output buffer size in bytes must be equal to ( nbsample * 2 * channels ).
+//   The optional trkbuf parameter can be used to get detailed status of the player. Put NULL/0 is unused.
+// -------------------------------------------
+// void jar_mod_unload( jar_mod_context_t * modctx )
+// - "Unload" / clear the player status.
+// -------------------------------------------
+///////////////////////////////////////////////////////////////////////////////////
+
+
+========================================================================
+jar_xm.h
+========================================================================
+
+// jar_xm.h
+//
+// ORIGINAL LICENSE - FOR LIBXM:
+//
+// Author: Romain "Artefact2" Dalmaso <artefact2@gmail.com>
+// Contributor: Dan Spencer <dan@atomicpotato.net>
+// Repackaged into jar_xm.h By: Joshua Adam Reisenauer <kd7tck@gmail.com>
+// This program is free software. It comes without any warranty, to the
+// extent permitted by applicable law. You can redistribute it and/or
+// modify it under the terms of the Do What The Fuck You Want To Public
+// License, Version 2, as published by Sam Hocevar. See
+// http://sam.zoy.org/wtfpl/COPYING for more details.
+//
+// HISTORY:
+//   v0.1.0 2016-02-22  jar_xm.h - development by Joshua Reisenauer, MAR 2016
+//   v0.2.1 2021-03-07  m4ntr0n1c: Fix clipping noise for "bad" xm's (they will always clip), avoid clip noise and just put a ceiling)
+//   v0.2.2 2021-03-09  m4ntr0n1c: Add complete debug solution (raylib.h must be included)
+//   v0.2.3 2021-03-11  m4ntr0n1c: Fix tempo, bpm and volume on song stop / start / restart / loop
+//   v0.2.4 2021-03-17  m4ntr0n1c: Sanitize code for readability
+//   v0.2.5 2021-03-22  m4ntr0n1c: Minor adjustments
+//   v0.2.6 2021-04-01  m4ntr0n1c: Minor fixes and optimisation
+//   v0.3.0 2021-04-03  m4ntr0n1c: Addition of Stereo sample support, Linear Interpolation and Ramping now addressable options in code
+//   v0.3.1 2021-04-04  m4ntr0n1c: Volume effects column adjustments, sample offset handling adjustments
+//
+// USAGE:
+//
+// In ONE source file, put:
+//
+//    #define JAR_XM_IMPLEMENTATION
+//    #include "jar_xm.h"
+//
+// Other source files should just include jar_xm.h
+//
+// SAMPLE CODE:
+//
+// jar_xm_context_t *musicptr;
+// float musicBuffer[48000 / 60];
+// int intro_load(void)
+// {
+//     jar_xm_create_context_from_file(&musicptr, 48000, "Song.XM");
+//     return 1;
+// }
+// int intro_unload(void)
+// {
+//     jar_xm_free_context(musicptr);
+//     return 1;
+// }
+// int intro_tick(long counter)
+// {
+//     jar_xm_generate_samples(musicptr, musicBuffer, (48000 / 60) / 2);
+//     if(IsKeyDown(KEY_ENTER))
+//         return 1;
+//     return 0;
+// }
+//
+
+
+========================================================================
+m3d.h
+========================================================================
+
+/*
+ * m3d.h
+ * https://gitlab.com/bztsrc/model3d
+ *
+ * Copyright (C) 2020 bzt (bztsrc@gitlab)
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ * @brief ANSI C89 / C++11 single header importer / exporter SDK for the Model 3D (.M3D) format
+ * https://gitlab.com/bztsrc/model3d
+ *
+ * PNG decompressor included from (with minor modifications to make it C89 valid):
+ *  stb_image - v2.13 - public domain image loader - http://nothings.org/stb_image.h
+ *
+ * @version: 1.0.0
+ */
+
+/* usage condition or license, like "MIT", "LGPL" or "BSD-3clause" */
+
+/* PNG decompressor from
+
+   stb_image - v2.23 - public domain image loader - http://nothings.org/stb_image.h
+*/
+
+/* zlib_compressor from
+
+   stb_image_write - v1.13 - public domain - http://nothings.org/stb/stb_image_write.h
+*/
+
+========================================================================
+miniaudio.h
+========================================================================
+
+/*
+Audio playback and capture library. Choice of public domain or MIT-0. See license statements at the end of this file.
+miniaudio - v0.11.25 - 2026-03-04
+
+David Reid - mackron@gmail.com
+
+Website:       https://miniaud.io
+Documentation: https://miniaud.io/docs
+GitHub:        https://github.com/mackron/miniaudio
+*/
+
+/*
+Core Audio
+
+So far, Core Audio has been the worst backend to work with due to being both unintuitive and having almost no documentation
+apart from comments in the headers (which admittedly are quite good). For my own purposes, and for anybody out there whose
+needing to figure out how this darn thing works, I'm going to outline a few things here.
+
+Since miniaudio is a fairly low-level API, one of the things it needs is control over specific devices, and it needs to be
+able to identify whether or not it can be used as playback and/or capture. The AudioObject API is the only one I've seen
+that supports this level of detail. There was some public domain sample code I stumbled across that used the AudioComponent
+and AudioUnit APIs, but I couldn't see anything that gave low-level control over device selection and capabilities (the
+distinction between playback and capture in particular). Therefore, miniaudio is using the AudioObject API.
+
+Most (all?) functions in the AudioObject API take a AudioObjectID as its input. This is the device identifier. When
+retrieving global information, such as the device list, you use kAudioObjectSystemObject. When retrieving device-specific
+data, you pass in the ID for that device. In order to retrieve device-specific IDs you need to enumerate over each of the
+devices. This is done using the AudioObjectGetPropertyDataSize() and AudioObjectGetPropertyData() APIs which seem to be
+the central APIs for retrieving information about the system and specific devices.
+
+To use the AudioObjectGetPropertyData() API you need to use the notion of a property address. A property address is a
+structure with three variables and is used to identify which property you are getting or setting. The first is the "selector"
+which is basically the specific property that you're wanting to retrieve or set. The second is the "scope", which is
+typically set to kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyScopeInput for input-specific properties and
+kAudioObjectPropertyScopeOutput for output-specific properties. The last is the "element" which is always set to
+kAudioObjectPropertyElementMain in miniaudio's case. I don't know of any cases where this would be set to anything different.
+
+Back to the earlier issue of device retrieval, you first use the AudioObjectGetPropertyDataSize() API to retrieve the size
+of the raw data which is just a list of AudioDeviceID's. You use the kAudioObjectSystemObject AudioObjectID, and a property
+address with the kAudioHardwarePropertyDevices selector and the kAudioObjectPropertyScopeGlobal scope. Once you have the
+size, allocate a block of memory of that size and then call AudioObjectGetPropertyData(). The data is just a list of
+AudioDeviceID's so just do "dataSize/sizeof(AudioDeviceID)" to know the device count.
+*/
+
+/*
+Pink noise generation based on Tonic (public domain) with modifications. https://github.com/TonicAudio/Tonic/blob/master/src/Tonic/Noise.h
+
+This is basically _the_ reference for pink noise from what I've found: http://www.firstpr.com.au/dsp/pink-noise/
+*/
+
+/* MurmurHash3. Based on code from https://github.com/PeterScott/murmur3/blob/master/murmur3.c (public domain). */
+
+/*
+This software is available as a choice of the following licenses. Choose
+whichever you prefer.
+
+===============================================================================
+ALTERNATIVE 1 - Public Domain (www.unlicense.org)
+===============================================================================
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
+
+===============================================================================
+ALTERNATIVE 2 - MIT No Attribution
+===============================================================================
+Copyright 2026 David Reid
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+========================================================================
+par_shapes.h
+========================================================================
+
+// SHAPES :: https://github.com/prideout/par
+// Simple C library for creation and manipulation of triangle meshes.
+//
+// The API is divided into three sections:
+//
+//   - Generators.  Create parametric surfaces, platonic solids, etc.
+//   - Queries.     Ask a mesh for its axis-aligned bounding box, etc.
+//   - Transforms.  Rotate a mesh, merge it with another, add normals, etc.
+//
+// In addition to the comment block above each function declaration, the API
+// has informal documentation here:
+//
+//     https://prideout.net/shapes
+//
+// For our purposes, a "mesh" is a list of points and a list of triangles; the
+// former is a flattened list of three-tuples (32-bit floats) and the latter is
+// also a flattened list of three-tuples (16-bit uints).  Triangles are always
+// oriented such that their front face winds counter-clockwise.
+//
+// Optionally, meshes can contain 3D normals (one per vertex), and 2D texture
+// coordinates (one per vertex).  That's it!  If you need something fancier,
+// look elsewhere.
+//
+// Distributed under the MIT License, see bottom of file.
+
+
+// par_shapes is distributed under the MIT license:
+//
+// Copyright (c) 2019 Philip Rideout
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+========================================================================
+qoa.h
+========================================================================
+
+/*
+
+Copyright (c) 2023, Dominic Szablewski - https://phoboslab.org
+SPDX-License-Identifier: MIT
+
+QOA - The "Quite OK Audio" format for fast, lossy audio compression
+
+
+-- Data Format
+
+QOA encodes pulse-code modulated (PCM) audio data with up to 255 channels, 
+sample rates from 1 up to 16777215 hertz and a bit depth of 16 bits.
+
+The compression method employed in QOA is lossy; it discards some information
+from the uncompressed PCM data. For many types of audio signals this compression
+is "transparent", i.e. the difference from the original file is often not
+audible.
+
+QOA encodes 20 samples of 16 bit PCM data into slices of 64 bits. A single
+sample therefore requires 3.2 bits of storage space, resulting in a 5x
+compression (16 / 3.2).
+
+A QOA file consists of an 8 byte file header, followed by a number of frames.
+Each frame contains an 8 byte frame header, the current 16 byte en-/decoder
+state per channel and 256 slices per channel. Each slice is 8 bytes wide and
+encodes 20 samples of audio data.
+
+All values, including the slices, are big endian. The file layout is as follows:
+
+struct {
+	struct {
+		char     magic[4];         // magic bytes "qoaf"
+		uint32_t samples;          // samples per channel in this file
+	} file_header;
+
+	struct {
+		struct {
+			uint8_t  num_channels; // no. of channels
+			uint24_t samplerate;   // samplerate in hz
+			uint16_t fsamples;     // samples per channel in this frame
+			uint16_t fsize;        // frame size (includes this header)
+		} frame_header;
+
+		struct {
+			int16_t history[4];    // most recent last
+			int16_t weights[4];    // most recent last
+		} lms_state[num_channels];
+
+		qoa_slice_t slices[256][num_channels];
+
+	} frames[ceil(samples / (256 * 20))];
+} qoa_file_t;
+
+Each `qoa_slice_t` contains a quantized scalefactor `sf_quant` and 20 quantized
+residuals `qrNN`:
+
+.- QOA_SLICE -- 64 bits, 20 samples --------------------------/  /------------.
+|        Byte[0]         |        Byte[1]         |  Byte[2]  \  \  Byte[7]   |
+| 7  6  5  4  3  2  1  0 | 7  6  5  4  3  2  1  0 | 7  6  5   /  /    2  1  0 |
+|------------+--------+--------+--------+---------+---------+-\  \--+---------|
+|  sf_quant  |  qr00  |  qr01  |  qr02  |  qr03   |  qr04   | /  /  |  qr19   |
+`-------------------------------------------------------------\  \------------`
+
+Each frame except the last must contain exactly 256 slices per channel. The last
+frame may contain between 1 .. 256 (inclusive) slices per channel. The last
+slice (for each channel) in the last frame may contain less than 20 samples; the
+slice still must be 8 bytes wide, with the unused samples zeroed out.
+
+Channels are interleaved per slice. E.g. for 2 channel stereo:
+slice[0] = L, slice[1] = R, slice[2] = L, slice[3] = R ...
+
+A valid QOA file or stream must have at least one frame. Each frame must contain
+at least one channel and one sample with a samplerate between 1 .. 16777215
+(inclusive).
+
+If the total number of samples is not known by the encoder, the samples in the
+file header may be set to 0x00000000 to indicate that the encoder is
+"streaming". In a streaming context, the samplerate and number of channels may
+differ from frame to frame. For static files (those with samples set to a
+non-zero value), each frame must have the same number of channels and same
+samplerate.
+
+Note that this implementation of QOA only handles files with a known total
+number of samples.
+
+A decoder should support at least 8 channels. The channel layout for channel
+counts 1 .. 8 is:
+
+	1. Mono
+	2. L, R
+	3. L, R, C
+	4. FL, FR, B/SL, B/SR
+	5. FL, FR, C, B/SL, B/SR
+	6. FL, FR, C, LFE, B/SL, B/SR
+	7. FL, FR, C, LFE, B, SL, SR
+	8. FL, FR, C, LFE, BL, BR, SL, SR
+
+QOA predicts each audio sample based on the previously decoded ones using a
+"Sign-Sign Least Mean Squares Filter" (LMS). This prediction plus the
+dequantized residual forms the final output sample.
+
+*/
+
+========================================================================
+qoaplay.c
+========================================================================
+
+/*******************************************************************************************
+*
+*   qoaplay - QOA stream playing helper functions
+*
+*   qoaplay is a tiny abstraction to read and decode a QOA file "on the fly".
+*   It reads and decodes one frame at a time with minimal memory requirements.
+*   qoaplay also provides some functions to seek to a specific frame.
+*
+*   LICENSE: MIT License
+*
+*   Copyright (c) 2023 Dominic Szablewski (@phoboslab), reviewed by Ramon Santamaria (@raysan5)
+*
+*   Permission is hereby granted, free of charge, to any person obtaining a copy
+*   of this software and associated documentation files (the "Software"), to deal
+*   in the Software without restriction, including without limitation the rights
+*   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*   copies of the Software, and to permit persons to whom the Software is
+*   furnished to do so, subject to the following conditions:
+*
+*   The above copyright notice and this permission notice shall be included in all
+*   copies or substantial portions of the Software.
+*
+*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+*   SOFTWARE.
+*
+**********************************************************************************************/
+
+========================================================================
+qoi.h
+========================================================================
+
+Copyright (c) 2021, Dominic Szablewski - https://phoboslab.org
+SPDX-License-Identifier: MIT
+
+
+QOI - The "Quite OK Image" format for fast, lossless image compression
+
+-- About
+
+QOI encodes and decodes images in a lossless format. Compared to stb_image and
+stb_image_write QOI offers 20x-50x faster encoding, 3x-4x faster decoding and
+20% better compression.
+
+
+-- Synopsis
+
+// Define `QOI_IMPLEMENTATION` in *one* C/C++ file before including this
+// library to create the implementation.
+
+#define QOI_IMPLEMENTATION
+#include "qoi.h"
+
+// Encode and store an RGBA buffer to the file system. The qoi_desc describes
+// the input pixel data.
+qoi_write("image_new.qoi", rgba_pixels, &(qoi_desc){
+	.width = 1920,
+	.height = 1080,
+	.channels = 4,
+	.colorspace = QOI_SRGB
+});
+
+// Load and decode a QOI image from the file system into a 32bbp RGBA buffer.
+// The qoi_desc struct will be filled with the width, height, number of channels
+// and colorspace read from the file header.
+qoi_desc desc;
+void *rgba_pixels = qoi_read("image.qoi", &desc, 4);
+
+
+
+-- Documentation
+
+This library provides the following functions;
+- qoi_read    -- read and decode a QOI file
+- qoi_decode  -- decode the raw bytes of a QOI image from memory
+- qoi_write   -- encode and write a QOI file
+- qoi_encode  -- encode an rgba buffer into a QOI image in memory
+
+========================================================================
+rprand.h
+========================================================================
+
+/**********************************************************************************************
+*
+*   rprand v1.1 - A simple and easy-to-use pseudo-random numbers generator (PRNG)
+*
+*   FEATURES:
+*       - Pseudo-random values generation, 32 bits: [0..4294967295]
+*       - Sequence generation avoiding duplicate values
+*       - Using standard and proven prng algorithm (Xoshiro128**)
+*       - State initialized with a separate generator (SplitMix64)
+*
+*   LIMITATIONS:
+*       - No negative numbers, up to the user to manage them
+*
+*   POSSIBLE IMPROVEMENTS:
+*       - Support 64 bits generation
+*
+*   ADDITIONAL NOTES:
+*     This library implements two pseudo-random number generation algorithms:
+*
+*         - Xoshiro128** : https://prng.di.unimi.it/xoshiro128starstar.c
+*         - SplitMix64   : https://prng.di.unimi.it/splitmix64.c
+*
+*     SplitMix64 is used to initialize the Xoshiro128** state, from a provided seed
+*
+*     It's suggested to use SplitMix64 to initialize the state of the generators starting from
+*     a 64-bit seed, as research has shown that initialization must be performed with a generator
+*     radically different in nature from the one initialized to avoid correlation on similar seeds.
+*
+*   CONFIGURATION:
+*       #define RPRAND_IMPLEMENTATION
+*           Generates the implementation of the library into the included file.
+*           If not defined, the library is in header only mode and can be included in other headers
+*           or source files without problems. But only ONE file should hold the implementation.
+*
+*   DEPENDENCIES: none
+*
+*   VERSIONS HISTORY:
+*       1.0 (01-Jun-2023) First version
+*
+*
+*   LICENSE: zlib/libpng
+*
+*   Copyright (c) 2023 Ramon Santamaria (@raysan5)
+*
+*   This software is provided "as-is", without any express or implied warranty. In no event
+*   will the authors be held liable for any damages arising from the use of this software.
+*
+*   Permission is granted to anyone to use this software for any purpose, including commercial
+*   applications, and to alter it and redistribute it freely, subject to the following restrictions:
+*
+*     1. The origin of this software must not be misrepresented; you must not claim that you
+*     wrote the original software. If you use this software in a product, an acknowledgment
+*     in the product documentation would be appreciated but is not required.
+*
+*     2. Altered source versions must be plainly marked as such, and must not be misrepresented
+*     as being the original software.
+*
+*     3. This notice may not be removed or altered from any source distribution.
+*
+**********************************************************************************************/
+
+// Xoshiro128** generator info:
+//
+//   Written in 2018 by David Blackman and Sebastiano Vigna (vigna@acm.org)
+//
+//   To the extent possible under law, the author has dedicated all copyright
+//   and related and neighboring rights to this software to the public domain
+//   worldwide. This software is distributed without any warranty.
+//
+//   See <http://creativecommons.org/publicdomain/zero/1.0/>.
+//
+//   This is xoshiro128** 1.1, one of our 32-bit all-purpose, rock-solid
+//   generators. It has excellent speed, a state size (128 bits) that is
+//   large enough for mild parallelism, and it passes all tests we are aware
+//   of.
+//
+//   Note that version 1.0 had mistakenly s[0] instead of s[1] as state
+//   word passed to the scrambler.
+//
+//   For generating just single-precision (i.e., 32-bit) floating-point
+//   numbers, xoshiro128+ is even faster.
+//
+//   The state must be seeded so that it is not everywhere zero.
+//
+
+
+// SplitMix64 generator info:
+//
+//   Written in 2015 by Sebastiano Vigna (vigna@acm.org)
+//
+//   To the extent possible under law, the author has dedicated all copyright
+//   and related and neighboring rights to this software to the public domain
+//   worldwide. This software is distributed without any warranty.
+//
+//   See <http://creativecommons.org/publicdomain/zero/1.0/>.
+//
+//
+//   This is a fixed-increment version of Java 8's SplittableRandom generator
+//   See http://dx.doi.org/10.1145/2714064.2660195 and
+//   http://docs.oracle.com/javase/8/docs/api/java/util/SplittableRandom.html
+//
+//   It is a very fast generator passing BigCrush, and it can be useful if
+//   for some reason you absolutely want 64 bits of state.
+
+
+========================================================================
+sdefl.h
+========================================================================
+
+## License
+```
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2020-2023 Micha Mettke
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+```
+*/
+
+========================================================================
+sinfl.h
+========================================================================
+
+## License
+```
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2020-2023 Micha Mettke
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+```
+*/
+
+========================================================================
+stb_image.h
+========================================================================
+
+LICENSE
+
+  See end of file for license information.
+
+RECENT REVISION HISTORY:
+
+      2.30  (2024-05-31) avoid erroneous gcc warning
+      2.29  (2023-05-xx) optimizations
+      2.28  (2023-01-29) many error fixes, security errors, just tons of stuff
+      2.27  (2021-07-11) document stbi_info better, 16-bit PNM support, bug fixes
+      2.26  (2020-07-13) many minor fixes
+      2.25  (2020-02-02) fix warnings
+      2.24  (2020-02-02) fix warnings; thread-local failure_reason and flip_vertically
+      2.23  (2019-08-11) fix clang static analysis warning
+      2.22  (2019-03-04) gif fixes, fix warnings
+      2.21  (2019-02-25) fix typo in comment
+      2.20  (2019-02-07) support utf8 filenames in Windows; fix warnings and platform ifdefs
+      2.19  (2018-02-11) fix warning
+      2.18  (2018-01-30) fix warnings
+      2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query, fix warnings
+      2.16  (2017-07-23) all functions have 16-bit variants; optimizations; bugfixes
+      2.15  (2017-03-18) fix png-1,2,4; all Imagenet JPGs; no runtime SSE detection on GCC
+      2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
+      2.13  (2016-12-04) experimental 16-bit API, only for PNG so far; fixes
+      2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
+      2.11  (2016-04-02) 16-bit PNGS; enable SSE2 in non-gcc x64
+                         RGB-format JPEG; remove white matting in PSD;
+                         allocate large structures on the stack;
+                         correct channel count for PNG & BMP
+      2.10  (2016-01-22) avoid warning introduced in 2.09
+      2.09  (2016-01-16) 16-bit TGA; comments in PNM files; STBI_REALLOC_SIZED
+
+   See end of file for full revision history.
+
+
+ ============================    Contributors    =========================
+
+ Image formats                          Extensions, features
+    Sean Barrett (jpeg, png, bmp)          Jetro Lauha (stbi_info)
+    Nicolas Schulz (hdr, psd)              Martin "SpartanJ" Golini (stbi_info)
+    Jonathan Dummer (tga)                  James "moose2000" Brown (iPhone PNG)
+    Jean-Marc Lienher (gif)                Ben "Disch" Wenger (io callbacks)
+    Tom Seddon (pic)                       Omar Cornut (1/2/4-bit PNG)
+    Thatcher Ulrich (psd)                  Nicolas Guillemot (vertical flip)
+    Ken Miller (pgm, ppm)                  Richard Mitton (16-bit PSD)
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
+
+// public domain zlib decode    v0.2  Sean Barrett 2006-11-18
+//    simple implementation
+//      - all input must be provided in an upfront buffer
+//      - all output is written to a single output buffer (can malloc/realloc)
+//    performance
+//      - fast huffman
+
+
+// public domain "baseline" PNG decoder   v0.10  Sean Barrett 2006-11-18
+//    simple implementation
+//      - only 8-bit samples
+//      - no CRC checking
+//      - allocates lots of intermediate memory
+//        - avoids problem of streaming data between subsystems
+//        - avoids explicit window management
+//    performance
+//      - uses stb_zlib, a PD zlib implementation with fast huffman decoding
+
+
+========================================================================
+stb_image_resize2.h
+========================================================================
+
+   LICENSE
+     See end of file for license information.
+*/
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
+
+========================================================================
+stb_image_write.h
+========================================================================
+
+LICENSE
+
+  See end of file for license information.
+
+*/
+
+/* ***************************************************************************
+ *
+ * JPEG writer
+ *
+ * This is based on Jon Olick's jo_jpeg.cpp:
+ * public domain Simple, Minimalistic JPEG writer - http://www.jonolick.com/code.html
+ */
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
+
+========================================================================
+stb_perlin.h
+========================================================================
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
+
+// stb_perlin.h - v0.5 - perlin noise
+// public domain single-file C implementation by Sean Barrett
+//
+// LICENSE
+//
+//   See end of file.
+//
+//
+// to create the implementation,
+//     #define STB_PERLIN_IMPLEMENTATION
+// in *one* C/CPP file that includes this file.
+//
+//
+// Documentation:
+//
+// float  stb_perlin_noise3( float x,
+//                           float y,
+//                           float z,
+//                           int   x_wrap=0,
+//                           int   y_wrap=0,
+//                           int   z_wrap=0)
+//
+// This function computes a random value at the coordinate (x,y,z).
+// Adjacent random values are continuous but the noise fluctuates
+// its randomness with period 1, i.e. takes on wholly unrelated values
+// at integer points. Specifically, this implements Ken Perlin's
+// revised noise function from 2002.
+//
+// The "wrap" parameters can be used to create wraparound noise that
+// wraps at powers of two. The numbers MUST be powers of two. Specify
+// 0 to mean "don't care". (The noise always wraps every 256 due
+// details of the implementation, even if you ask for larger or no
+// wrapping.)
+//
+// float  stb_perlin_noise3_seed( float x,
+//                                float y,
+//                                float z,
+//                                int   x_wrap=0,
+//                                int   y_wrap=0,
+//                                int   z_wrap=0,
+//                                int   seed)
+//
+// As above, but 'seed' selects from multiple different variations of the
+// noise function. The current implementation only uses the bottom 8 bits
+// of 'seed', but possibly in the future more bits will be used.
+//
+//
+// Fractal Noise:
+//
+// Three common fractal noise functions are included, which produce
+// a wide variety of nice effects depending on the parameters
+// provided. Note that each function will call stb_perlin_noise3
+// 'octaves' times, so this parameter will affect runtime.
+//
+// float stb_perlin_ridge_noise3(float x, float y, float z,
+//                               float lacunarity, float gain, float offset, int octaves)
+//
+// float stb_perlin_fbm_noise3(float x, float y, float z,
+//                             float lacunarity, float gain, int octaves)
+//
+// float stb_perlin_turbulence_noise3(float x, float y, float z,
+//                                    float lacunarity, float gain, int octaves)
+//
+// Typical values to start playing with:
+//     octaves    =   6     -- number of "octaves" of noise3() to sum
+//     lacunarity = ~ 2.0   -- spacing between successive octaves (use exactly 2.0 for wrapping output)
+//     gain       =   0.5   -- relative weighting applied to each successive octave
+//     offset     =   1.0?  -- used to invert the ridges, may need to be larger, not sure
+//
+//
+// Contributors:
+//    Jack Mott - additional noise functions
+//    Jordan Peck - seeded noise
+//
+
+
+========================================================================
+stb_rect_pack.h
+========================================================================
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
+
+// stb_rect_pack.h - v1.01 - public domain - rectangle packing
+// Sean Barrett 2014
+//
+// Useful for e.g. packing rectangular textures into an atlas.
+// Does not do rotation.
+//
+// Before #including,
+//
+//    #define STB_RECT_PACK_IMPLEMENTATION
+//
+// in the file that you want to have the implementation.
+//
+// Not necessarily the awesomest packing method, but better than
+// the totally naive one in stb_truetype (which is primarily what
+// this is meant to replace).
+//
+// Has only had a few tests run, may have issues.
+//
+// More docs to come.
+//
+// No memory allocations; uses qsort() and assert() from stdlib.
+// Can override those by defining STBRP_SORT and STBRP_ASSERT.
+//
+// This library currently uses the Skyline Bottom-Left algorithm.
+//
+// Please note: better rectangle packers are welcome! Please
+// implement them to the same API, but with a different init
+// function.
+//
+// Credits
+//
+//  Library
+//    Sean Barrett
+//  Minor features
+//    Martins Mozeiko
+//    github:IntellectualKitty
+//
+//  Bugfixes / warning fixes
+//    Jeremy Jaussaud
+//    Fabian Giesen
+//
+// Version history:
+//
+//     1.01  (2021-07-11)  always use large rect mode, expose STBRP__MAXVAL in public section
+//     1.00  (2019-02-25)  avoid small space waste; gracefully fail too-wide rectangles
+//     0.99  (2019-02-07)  warning fixes
+//     0.11  (2017-03-03)  return packing success/fail result
+//     0.10  (2016-10-25)  remove cast-away-const to avoid warnings
+//     0.09  (2016-08-27)  fix compiler warnings
+//     0.08  (2015-09-13)  really fix bug with empty rects (w=0 or h=0)
+//     0.07  (2015-09-13)  fix bug with empty rects (w=0 or h=0)
+//     0.06  (2015-04-15)  added STBRP_SORT to allow replacing qsort
+//     0.05:  added STBRP_ASSERT to allow replacing assert
+//     0.04:  fixed minor bug in STBRP_LARGE_RECTS support
+//     0.01:  initial release
+//
+// LICENSE
+//
+//   See end of file for license information.
+
+
+========================================================================
+stb_truetype.h
+========================================================================
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
+
+// stb_truetype.h - v1.26 - public domain
+// authored from 2009-2021 by Sean Barrett / RAD Game Tools
+//
+// =======================================================================
+//
+//    NO SECURITY GUARANTEE -- DO NOT USE THIS ON UNTRUSTED FONT FILES
+//
+// This library does no range checking of the offsets found in the file,
+// meaning an attacker can use it to read arbitrary memory.
+//
+// =======================================================================
+//
+//   This library processes TrueType files:
+//        parse files
+//        extract glyph metrics
+//        extract glyph shapes
+//        render glyphs to one-channel bitmaps with antialiasing (box filter)
+//        render glyphs to one-channel SDF bitmaps (signed-distance field/function)
+//
+//   Todo:
+//        non-MS cmaps
+//        crashproof on bad data
+//        hinting? (no longer patented)
+//        cleartype-style AA?
+//        optimize: use simple memory allocator for intermediates
+//        optimize: build edge-list directly from curves
+//        optimize: rasterize directly from curves?
+//
+// ADDITIONAL CONTRIBUTORS
+//
+//   Mikko Mononen: compound shape support, more cmap formats
+//   Tor Andersson: kerning, subpixel rendering
+//   Dougall Johnson: OpenType / Type 2 font handling
+//   Daniel Ribeiro Maciel: basic GPOS-based kerning
+//
+//   Misc other:
+//       Ryan Gordon
+//       Simon Glass
+//       github:IntellectualKitty
+//       Imanol Celaya
+//       Daniel Ribeiro Maciel
+//
+//   Bug/warning reports/fixes:
+//       "Zer" on mollyrocket       Fabian "ryg" Giesen   github:NiLuJe
+//       Cass Everitt               Martins Mozeiko       github:aloucks
+
+========================================================================
+stb_vorbis.c
+========================================================================
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
+
+// Ogg Vorbis audio decoder - v1.22 - public domain
+// http://nothings.org/stb_vorbis/
+//
+// Original version written by Sean Barrett in 2007.
+//
+// Originally sponsored by RAD Game Tools. Seeking implementation
+// sponsored by Phillip Bennefall, Marc Andersen, Aaron Baker,
+// Elias Software, Aras Pranckevicius, and Sean Barrett.
+//
+// LICENSE
+//
+//   See end of file for license information.
+//
+// Limitations:
+//
+//   - floor 0 not supported (used in old ogg vorbis files pre-2004)
+//   - lossless sample-truncation at beginning ignored
+//   - cannot concatenate multiple vorbis streams
+//   - sample positions are 32-bit, limiting seekable 192Khz
+//       files to around 6 hours (Ogg supports 64-bit)
+//
+// Feature contributors:
+//    Dougall Johnson (sample-exact seeking)
+//
+// Bugfix/warning contributors:
+//    Terje Mathisen     Niklas Frykholm     Andy Hill
+//    Casey Muratori     John Bolton         Gargaj
+//    Laurent Gomila     Marc LeBlanc        Ronny Chevalier
+//    Bernhard Wodo      Evan Balster        github:alxprd
+//    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
+//    Phillip Bennefall  Rohit               Thiago Goulart
+//    github:manxorist   Saga Musix          github:infatum
+//    Timur Gagiev       Maxwell Koo         Peter Waller
+//    github:audinowho   Dougall Johnson     David Reid
+//    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
+//    AnthoFoxo          github:morlat       Gabriel Ravier
+//
+// Partial history:
+//    1.22    - 2021-07-11 - various small fixes
+//    1.21    - 2021-07-02 - fix bug for files with no comments
+//    1.20    - 2020-07-11 - several small fixes
+//    1.19    - 2020-02-05 - warnings
+//    1.18    - 2020-02-02 - fix seek bugs; parse header comments; misc warnings etc.
+//    1.17    - 2019-07-08 - fix CVE-2019-13217..CVE-2019-13223 (by ForAllSecure)
+//    1.16    - 2019-03-04 - fix warnings
+//    1.15    - 2019-02-07 - explicit failure if Ogg Skeleton data is found
+//    1.14    - 2018-02-11 - delete bogus dealloca usage
+//    1.13    - 2018-01-29 - fix truncation of last frame (hopefully)
+//    1.12    - 2017-11-21 - limit residue begin/end to blocksize/2 to avoid large temp allocs in bad/corrupt files
+//    1.11    - 2017-07-23 - fix MinGW compilation
+//    1.10    - 2017-03-03 - more robust seeking; fix negative ilog(); clear error in open_memory
+//    1.09    - 2016-04-04 - back out 'truncation of last frame' fix from previous version
+//    1.08    - 2016-04-02 - warnings; setup memory leaks; truncation of last frame
+//    1.07    - 2015-01-16 - fixes for crashes on invalid files; warning fixes; const
+//    1.06    - 2015-08-31 - full, correct support for seeking API (Dougall Johnson)
+//                           some crash fixes when out of memory or with corrupt files
+//                           fix some inappropriately signed shifts
+//    1.05    - 2015-04-19 - don't define __forceinline if it's redundant
+//    1.04    - 2014-08-27 - fix missing const-correct case in API
+//    1.03    - 2014-08-07 - warning fixes
+//    1.02    - 2014-07-09 - declare qsort comparison as explicitly _cdecl in Windows
+//    1.01    - 2014-06-18 - fix stb_vorbis_get_samples_float (interleaved was correct)
+//    1.0     - 2014-05-26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
+//                           (API change) report sample rate for decode-full-file funcs
+//
+// See end of file for full version history.
+
+
+========================================================================
+tinyobj_loader_c.h
+========================================================================
+
+/*
+   The MIT License (MIT)
+
+   Copyright (c) 2016 - 2019 Syoyo Fujita and many contributors.
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   THE SOFTWARE.
+   */
+
+========================================================================
+vox_loader.h
+========================================================================
+
+/*
+   The MIT License (MIT)
+
+   Copyright (c) 2021 Johann Nadalutti.
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+   THE SOFTWARE.
+
+
+	vox_loader - v1.01
+			 no warranty implied; use at your own risk
+
+	Do this:
+	#define VOX_LOADER_INCLUDE__H
+	before you include this file in* one* C or C++ file to create the implementation.
+
+	// i.e. it should look like this:
+	#include ...
+	#include ...
+	#include ...
+	#define VOX_LOADER_INCLUDE__H
+	#include "vox_loader.h"
+
+revision history:
+	1.00  (2021-09-03)	first released version
+	1.01  (2021-09-07)	Support custom memory allocators
+						Removed Raylib dependencies
+						Changed Vox_LoadFileName to Vox_LoadFromMemory
+    1.02  (2021-09-10)  @raysan5: Reviewed some formating
+    1.03  (2021-10-02)  @catmanl: Reduce warnings on gcc
+    1.04  (2021-10-17)  @warzes: Fixing the error of loading VOX models
+
+*/

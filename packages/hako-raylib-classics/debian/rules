@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+# raylib comes from ../hako-raylib-hello/raylib (git submodule).
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=Release
