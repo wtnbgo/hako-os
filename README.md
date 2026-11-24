@@ -41,6 +41,7 @@ How each device was brought up: [docs chapter 1](docs/en/1-device-setup.md) (Ret
 | hako-sdl-hello | SDL3 sample / template |
 | hako-love | LÖVE 12 (SDL3) from a pinned upstream snapshot |
 | hako-raylib-hello | raylib (SDL3 platform) sample |
+| hako-siv3d-games | the 22 game samples of Siv3D in one app, for pad and touch (SDL3 port of OpenSiv3D) |
 | hako-mesa | Mesa 26.2 (freedreno, turnip) in /usr/lib/hako/mesa for GPUs Debian's Mesa does not know yet (Adreno 613) |
 | rpmini-bsp | Retroid Pocket Mini board support: ESP/boot entry updates, USB gadget, UCM, pad mapping, panel rotation |
 | rg55g1-bsp | Anbernic RG 55G1 board support: the same parts for that device, session on hako-mesa |
@@ -90,6 +91,9 @@ hako-os itself is MIT licensed (see LICENSE). Third-party parts keep their own l
 - [Mesa](https://mesa3d.org/) (hako-mesa, Debian's source tarball fetched at build time): MIT and others, see its docs
 - [LÖVE](https://love2d.org/) (submodule, packages/hako-love/love): zlib license
 - [raylib](https://www.raylib.com/) (submodule, packages/hako-raylib-hello/raylib): zlib license
+- [OpenSiv3D](https://github.com/Siv3D/OpenSiv3D) (SDL3 port, fetched at build time) and its bundled fonts, in hako-siv3d-games: MIT and the
+  licenses listed in the app; the games are based on the Siv3D documentation samples (MIT) and on
+  [Siv3D-Samples](https://github.com/Siv3D/Siv3D-Samples) / [Reputeless/games](https://github.com/Reputeless/games) (CC0)
 - Firmware listed in kernel/firmware-<SOC>.list (fetched at build time from
   [linux-firmware](https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git), and for SM4450 also from
   [ROCKNIX extra-firmware](https://github.com/ROCKNIX/extra-firmware)): see their license files

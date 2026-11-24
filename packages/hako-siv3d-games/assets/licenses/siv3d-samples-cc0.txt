@@ -1,0 +1,10 @@
+Title: Siv3D-Samples, Reputeless/games (CC0 1.0)
+Copyright: Siv3D-Samples (https://github.com/Siv3D/Siv3D-Samples), commit b29d0155ec1b2b487ce8f347fd769aec2331995d
+Copyright: Reputeless/games (https://github.com/Reputeless/games), commit 20cd026327799dbb897c90d36732a32d2ee0934d
+
+Games 13 to 20 of this app are based on these samples, which are dedicated to the public
+domain under CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/):
+Minesweeper, SimpleOthelloAI, Klondike and AutoTiles (with its tile images) from
+Siv3D-Samples; games 003 (神経衰弱), 004 (ハノイの塔), 006 (Wheel of Fortune) and
+007 (2D RPG のマップと移動の基本, its map data) from Reputeless/games.
+No permission notice is required; the sources are listed here as a courtesy.

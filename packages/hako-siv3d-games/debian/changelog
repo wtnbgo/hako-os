@@ -1,0 +1,9 @@
+hako-siv3d-games (0.1.0-1) trixie; urgency=medium
+
+  * Initial package: the 22 game samples of the Siv3D documentation in one
+    app (menu, pad and touch input, license screen). Games 1-12, 21, 22 are
+    based on the MIT-licensed samples of siv3d.docs, 13-20 on the CC0 samples
+    of Siv3D-Samples and Reputeless/games. OpenSiv3D (SDL3) pinned at
+    a8a1f4d0b (clears the letterbox every frame).
+
+ -- hako-os <hako@hako-os>  Tue, 24 Nov 2026 12:00:00 +0900

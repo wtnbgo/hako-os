@@ -92,6 +92,7 @@ Each one lets you check the gamepad, touch, sound and FPS. Use them as templates
 | SDL3 sample | C / SDL_Renderer | `packages/hako-sdl-hello/` | Included in the image (`hako-sdl-hello`) |
 | raylib sample | C / OpenGL | `packages/hako-raylib-hello/` | Included in the image (`hako-raylib-hello`) |
 | LÖVE sample | Lua / Vulkan | `samples/love-hello/` | The runtime `hako-love` is in the image. Transfer the sample (see below) |
+| Siv3D game collection | C++ / OpenGL | `packages/hako-siv3d-games/` | Included in the image (`hako-siv3d-games`) |
 | Siv3D | C++ / OpenGL | (start from siv3d_app; links below) | Transfer and register with a `.app` |
 | Kirikiri Z | TJS / OpenGL | (SDL3 build from krkrz_dev; links below) | Transfer and register with a `.app` |
 
@@ -139,6 +140,31 @@ arm64 build container [wamsoft/steamdev `deckbuild/`](https://github.com/wamsoft
 - Start from siv3d_app, build with `python3 <OpenSiv3D>/tools/siv3d_app.py --project <app> --target rpmini all`, and
   `... --target rpmini run` transfers the app, writes the `.app` and starts it with `launch-app` in one step
   (the build runs in the rpmini container from steamdev's `deckbuild/`; the device address is `rpmini.device` in `siv3d-app.json`).
+
+#### Siv3D game collection (`hako-siv3d-games`)
+
+The 22 [game samples of Siv3D](https://siv3d.github.io/ja-jp/samples/games/) in one app: chosen from a menu and played
+with the pad and touch. It is also an example of a Siv3D app for hako.
+
+- Layout (`packages/hako-siv3d-games/src/`):
+  - `Input.hpp`: pad, keyboard, mouse and touch merged into confirm / cancel / directions / a pointer.
+    A / B follow the printed labels (SDL tells whether the pad has a Nintendo layout). In games played with the mouse
+    the stick moves the pointer and A clicks.
+  - `Games.cpp`: the list of games (number, title, controls, scene size); `games/Gnn_*.cpp` are the games.
+  - Each game keeps the scene size it was written for (800x600 etc.), scaled with letterboxing (`ResizeMode::Keep`).
+  - START+SELECT / HOME / Esc returns to the menu. The licenses are shown from the menu (`assets/licenses/`).
+- Where each game comes from and what was changed is at the top of its file. Main changes:
+  - 15 puzzle: the picture is made from an emoji instead of a file dialog. Typing: an on-screen keyboard. Rhythm game: the chart is built in.
+  - Slot machine: the built-in Heavy typeface instead of an extra font. 2D RPG: the third-party map chip set cannot be shipped,
+    so the map is drawn with shapes and emoji (the map layout is the sample's).
+- Licenses: 1-12, 21 and 22 are samples of the Siv3D documentation (MIT; the copyright notice and the license text are in
+  `assets/licenses/siv3d-docs.txt`); 13-20 come from [Siv3D-Samples](https://github.com/Siv3D/Siv3D-Samples) and
+  [Reputeless/games](https://github.com/Reputeless/games) (CC0). The changes for hako are MIT.
+- Build: `scripts/build-packages.sh hako-siv3d-games` (it runs `siv3d_app.py --target rpmini stage`, so docker and the
+  deckbuild-rpmini image are needed). OpenSiv3D is pinned to a commit by `siv3d.ref` in `siv3d-app.json`; to use a local
+  working copy, set `SIV3D_BASE=<OpenSiv3D>`.
+- While developing, `SIV3D_BASE=<OpenSiv3D> python3 <OpenSiv3D>/tools/siv3d_app.py --project packages/hako-siv3d-games --target rpmini run`
+  transfers and starts it.
 
 ### Kirikiri Z
 

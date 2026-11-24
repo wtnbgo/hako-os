@@ -20,3 +20,5 @@ packages/*/debian/*.substvars
 packages/*/debian/files
 packages/*/debian/hako-*/
 packages/*/debian/rpmini-*/
+# siv3d_app build output
+packages/*/build/

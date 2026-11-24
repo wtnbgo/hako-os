@@ -1,0 +1,19 @@
+Source: hako-siv3d-games
+Section: games
+Priority: optional
+Maintainer: hako-os <hako@hako-os>
+Build-Depends: debhelper-compat (= 13), python3:native, cmake, git
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: hako-siv3d-games
+Architecture: arm64
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ libegl1, libgles2, libwayland-client0, libwayland-cursor0, libwayland-egl1,
+ libxkbcommon0, libdrm2, libgbm1
+Description: Siv3D game collection for hako (the game samples of Siv3D)
+ The game samples of the Siv3D documentation (https://siv3d.github.io/ja-jp/samples/games/),
+ 22 of them, in one app with a menu, playable with the built-in pad of a handheld
+ and with touch. Built with the SDL3 port of OpenSiv3D; the program, its SDL3 and
+ the Siv3D engine resources are in /usr/lib/hako/siv3d-games. The licenses are
+ shown from the menu. Registered in hako-launcher as "Siv3D ゲーム集".

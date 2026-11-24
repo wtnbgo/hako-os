@@ -1,0 +1,41 @@
+#!/usr/bin/make -f
+# Built with the siv3d_app tooling of the SDL3 port of OpenSiv3D, which compiles in its
+# arm64 build container (deckbuild-rpmini, docker; see docs chapter 2, "Siv3D").
+# OpenSiv3D: SIV3D_BASE if set, else build/OpenSiv3D of the repository, cloned at the
+# version pinned in siv3d-app.json ("siv3d" / "ref") by cmake/FetchSiv3D.cmake.
+TOP := $(abspath $(CURDIR)/../..)
+SIV3D_BASE ?= $(TOP)/build/OpenSiv3D
+export SIV3D_BASE
+LIB := /usr/lib/hako/siv3d-games
+DEST := $(CURDIR)/debian/hako-siv3d-games
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	cmake -DSIV3D_BASE=$(SIV3D_BASE) -P cmake/FetchSiv3D.cmake
+
+# the build host's python and docker, not the cross toolchain of dpkg-buildpackage
+override_dh_auto_build:
+	env -u CC -u CXX -u CFLAGS -u CXXFLAGS -u LDFLAGS -u CPPFLAGS \
+		python3 $(SIV3D_BASE)/tools/siv3d_app.py --project . --target rpmini stage
+
+override_dh_auto_install:
+	mkdir -p $(DEST)$(LIB)
+	cp -a build/rpmini/dist/. $(DEST)$(LIB)/
+	install -D -m 644 hako-siv3d-games.app $(DEST)/usr/share/hako/apps/hako-siv3d-games.app
+
+override_dh_auto_test:
+
+# keep build/ (the engine build takes long); it is not tracked
+override_dh_auto_clean:
+
+# no -dbgsym package
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+
+# the bundled SDL3 is private to the program
+override_dh_makeshlibs:
+
+override_dh_shlibdeps:
+	dh_shlibdeps -l$(DEST)$(LIB)
