@@ -149,6 +149,9 @@ The old names (rpmini-session / rpmini-dev / rpmini-launcher / rpmini-sdl-hello)
   also supports `HAKO_PAD_LAYOUT=label`), sticks, touch and FPS. ABXY play sounds. START+SELECT quits.
 - raylib's button names (`GAMEPAD_BUTTON_RIGHT_FACE_DOWN` etc.) are positions, the same as SDL.
 - Verified on the device (2026-11-20): movement, jump, camera, zoom, sound, touch, quit.
+- raylib is built in statically, so its license and the notices of the third-party code it compiles in (stb, miniaudio, ...)
+  are installed in `/usr/share/doc/hako-raylib-hello/licenses/`. Source: `licenses/` (made from the submodule by `make-licenses.py`;
+  hako-raylib-classics uses them too).
 
 **hako-raylib-classics**: the 12 classic games of raylib (classics of raysan5/raylib-games, zlib) in one app (`packages/hako-raylib-classics/`).
 

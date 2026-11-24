@@ -14,3 +14,7 @@ target_link_libraries(hako-raylib-hello PRIVATE raylib m)
 include(GNUInstallDirs)
 install(TARGETS hako-raylib-hello RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES hako-raylib-hello.app DESTINATION ${CMAKE_INSTALL_DATADIR}/hako/apps)
+# raylib is built in statically: ship its license and the notices of the third-party code it
+# compiles in (licenses/, made by licenses/make-licenses.py from the submodule)
+install(FILES licenses/raylib.txt licenses/raylib-external.txt
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/hako-raylib-hello/licenses)

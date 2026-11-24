@@ -1,3 +1,11 @@
+hako-raylib-hello (0.1.2) trixie; urgency=medium
+
+  * Ship raylib's license and the license notices of the third-party code it
+    builds in (/usr/share/doc/hako-raylib-hello/licenses/), since raylib is
+    linked statically.
+
+ -- hako-os <hako@hako-os>  Tue, 24 Nov 2026 19:00:00 +0900
+
 hako-raylib-hello (0.1.1) trixie; urgency=medium
 
   * Every connected gamepad drives the sample; it follows the pad used last.

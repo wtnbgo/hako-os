@@ -124,7 +124,7 @@ in one app: chosen from a menu and played with the pad and touch.
 - Input: arrow keys = d-pad / stick, Space and Enter = A (as printed), P (pause) = START. Touching the screen shows an
   on-screen d-pad and A. In the mouse games (Gorilas, Missile Commander) touch is the mouse, and the stick moves a pointer that A clicks.
 - START+SELECT / HOME / Esc / MENU (top left) return to the menu. The licenses (the games, raylib, the notices of the
-  third-party code raylib compiles in) are shown from the menu; `licenses/make-licenses.py` regenerates the notices after a raylib update.
+  third-party code raylib compiles in) are shown from the menu; raylib's notices are in `packages/hako-raylib-hello/licenses/`; regenerate them with `make-licenses.py` after updating the raylib submodule.
 - raylib is the submodule of `hako-raylib-hello`, built in statically. Its default font has no Japanese, so the texts are English.
 
 ### LÖVE sample (`samples/love-hello`)

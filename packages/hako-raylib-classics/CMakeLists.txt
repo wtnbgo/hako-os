@@ -18,6 +18,7 @@ endif()
 
 include(GNUInstallDirs)
 install(TARGETS raylib-classics RUNTIME DESTINATION lib/hako/raylib-classics)
-install(FILES licenses/raylib-classics.txt licenses/raylib.txt licenses/raylib-external.txt licenses/hako-raylib-classics.txt
+install(FILES licenses/raylib-classics.txt licenses/hako-raylib-classics.txt
+        ../hako-raylib-hello/licenses/raylib.txt ../hako-raylib-hello/licenses/raylib-external.txt
         DESTINATION lib/hako/raylib-classics/licenses)
 install(FILES hako-raylib-classics.app DESTINATION ${CMAKE_INSTALL_DATADIR}/hako/apps)

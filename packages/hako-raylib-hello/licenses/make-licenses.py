@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Writes the license texts shown by the app (licenses/*.txt).
+"""Writes the license texts of raylib for the packages that build it in statically
+(hako-raylib-hello, hako-raylib-classics):
 
-  raylib-classics.txt      classics/LICENSE (the games)
-  raylib.txt               LICENSE of raylib (../hako-raylib-hello/raylib, linked statically)
+  raylib.txt               LICENSE of raylib (the submodule raylib/)
   raylib-external.txt      the license notices of the third-party code raylib compiles in
                            (raylib/src/external: the comment blocks that hold the license)
 
-Run again after updating the raylib submodule or classics/.
+Run again after updating the raylib submodule.
 """
 import os
 import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(HERE)
-RAYLIB = os.path.join(PKG, '..', 'hako-raylib-hello', 'raylib')
+RAYLIB = os.path.join(PKG, 'raylib')
 
 # compiled into raylib on the SDL platform with the default config.h
 EXTERNAL = [
@@ -59,12 +59,6 @@ def write(name, body):
         f.write(body.rstrip() + '\n')
 
 
-commit = open(os.path.join(PKG, 'classics', 'COMMIT')).read().strip()
-write('raylib-classics.txt',
-      'raylib classics (the games)\n'
-      f'https://github.com/raysan5/raylib-games/tree/{commit}/classics\n'
-      'The games are included unmodified; hako adds a wrapper around each (src/games/).\n\n'
-      + open(os.path.join(PKG, 'classics', 'LICENSE'), encoding='utf-8-sig').read())
 write('raylib.txt', 'raylib\nhttps://github.com/raysan5/raylib\n\n'
       + open(os.path.join(RAYLIB, 'LICENSE'), encoding='utf-8-sig').read())
 
