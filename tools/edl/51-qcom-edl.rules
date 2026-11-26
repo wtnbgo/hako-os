@@ -1,0 +1,3 @@
+# Qualcomm EDL (9008) for qdl without sudo: members of plugdev may open the device.
+# Install: sudo cp 51-qcom-edl.rules /etc/udev/rules.d/ && sudo udevadm control --reload
+SUBSYSTEM=="usb", ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9008", MODE="0660", GROUP="plugdev"

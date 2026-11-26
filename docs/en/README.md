@@ -9,7 +9,7 @@ and for putting your own apps on them. The only supported device right now is th
 
 | # | Document | Contents |
 |---|---|---|
-| 1 | [1-device-setup.md](1-device-setup.md) | From backup → OpenABL → writing the dev image to SD and booting it (Retroid Pocket Mini only) |
+| 1 | [1-device-setup.md](1-device-setup.md) | back up over EDL → OpenABL → write the dev image to SD and boot (Retroid Pocket Mini, RG 55G1; Windows or Linux PC) |
 | 2 | [2-development-and-samples.md](2-development-and-samples.md) | Day-to-day steps for installing and running apps on the device, and how to use each sample (SDL3 / LÖVE / raylib / Siv3D / Kirikiri Z) |
 | 3 | [3-packaging-an-app.md](3-packaging-an-app.md) | Turning what you made into a .deb, and bundling it into a single image |
 | 4 | [4-new-boards.md](4-new-boards.md) | Preparing an image for another device of the same family (OpenABL + Qualcomm) |

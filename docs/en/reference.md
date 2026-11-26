@@ -469,8 +469,8 @@ before starting it to get nearly the same conditions (the `HAKO_PAD_LAYOUT` swap
 - **Connection dropped during a package update**: run `dpkg --configure -a` on the device, then redo `dev-update.sh`.
   Note that the USB gadget service is configured not to restart on update (restarting it would drop the USB connection).
 - **Going back to Android**: holding Volume + at boot starts Android (the internal Android is still there).
-  To restore stock ABL in place of OpenABL itself, write back the stock `abl_a` / `abl_b` you dumped before installing it
-  (`dd` with Android root. Before installing OpenABL, always back these up together with the device-specific partitions).
+  To restore stock ABL in place of OpenABL itself, run `tools/edl/hako_edl.py <device> restore <backup>` over EDL
+  (writes back `abl_a` / `abl_b` from the backup taken before installing it; see "Reverting" in [1-device-setup.md](1-device-setup.md)).
 
 ### Quirks of "Run Script as Root" (Android)
 

@@ -17,7 +17,7 @@ It is kept as a model for the next device: **what was looked up, what each decis
 | Research | Where OpenABL, kernel, DTS, firmware and audio config come from | no | 1-2 h |
 | Kernel | Per-SoC kernel builds, build the SM4450 one | no | 1 h + 8 min build |
 | bsp | `rg55g1-bsp` from `rpmini-bsp` | no | 1 h |
-| Image, Android | `elbe/rg55g1-dev.xml`, `tools/rg55g1-android/` | no | 30 min |
+| Image, Android | `elbe/rg55g1-dev.xml`, `tools/rg55g1-android/` (unusable, 1.2) | no | 30 min |
 | Backup, OpenABL | Back up over EDL, write OpenABL over EDL | yes | 1-2 h (half a day the first time, finding out how) |
 | First boot, tuning | Rotation, touch, pad, audio, USB, Wi-Fi, GPU, clock | yes | half a day+ |
 
@@ -178,9 +178,10 @@ BOARD=rg55g1 bash scripts/build-image.sh dev   # -> rg55g1-dev.img
   - `rg55g1_backup.sh`: also saves `dtbo_a` and `vendor_boot_a` (to look at the stock DTS later).
   - `openabl_flash.sh` / `openabl_restore.sh`: stop while the device values (`PLAT_EXPECT` / `MODEL_EXPECT`) are empty; they were filled in after arrival.
   - **On V3.0.9 they cannot read the partitions, so they were used neither for the backup nor for writing** (1.2). `run_check.sh` still shows the device values.
-- `tools/rg55g1-edl/edl_xml.py`: makes the fh_loader XML files for EDL (added after arrival).
-  - `gpt`: read the GPT of each LUN. `backup`: from those GPTs, read the given partitions (and list all in `parts.txt`).
-    `flash`: write a file to the given partitions, and read the written range back.
+- The EDL reads and writes were first done by hand, with a script that made the fh_loader XML files.
+  That was later folded into `tools/edl/hako_edl.py`, which runs on Windows (QPST) and Linux (qdl) and is shared with the
+  Retroid Pocket Mini ([1-device-setup.md](1-device-setup.md)). What differs per device (loader, number of LUNs, partitions to save,
+  OpenABL hash) goes in the device table (`DEVICES`) in the script.
   - Partition locations always come from the GPT, never typed by hand.
 
 ## 3. After arrival
@@ -202,44 +203,30 @@ adb shell getprop ro.boot.flash.locked   # 0 (unlocked)
 
 ### 3.2 Back up over EDL
 
-What is needed (Windows):
-
-| Item | Notes |
-|---|---|
-| QPST | `QSaharaServer.exe` (sends the loader) and `fh_loader.exe` (reads / writes). The ones from QFIL 2.0.3.5 worked |
-| Qualcomm USB driver | the device in EDL shows up as `Qualcomm HS-USB QDLoader 9008 (COMn)` |
-| firehose loader `xbl_s_devprg_ns.melf` | the program that reads and writes on the device side. The one in `stock/firmware/` of TheGammaSqueeze/sd-tools was used (signed with Qualcomm test keys, 1.7 MB). Third-party, so it is not in the repository |
-
-Steps (`<dir>` is where the backup goes, `COMn` the COM port that appears in EDL):
+The PC tools are as in step 1 of [1-device-setup.md](1-device-setup.md) (QPST on Windows this time; the one from QFIL 2.0.3.5 worked).
+The loader `xbl_s_devprg_ns.melf` is the one in `stock/firmware/` of TheGammaSqueeze/sd-tools
+(signed with Qualcomm test keys, 1.7 MB). Third-party, so it is not in the repository.
 
 ```powershell
-adb reboot edl                                   # the screen stays black; a new COM port means it is in EDL
-QSaharaServer.exe -p \\.\COMn -s 13:xbl_s_devprg_ns.melf
-python3 tools/rg55g1-edl/edl_xml.py gpt <dir>
-fh_loader.exe --port=\\.\COMn --memoryname=UFS --sendxml=read_gpt.xml --convertprogram2read --search_path=<dir> --mainoutputdir=<dir> --noprompt --zlpawarehost=1
-python3 tools/rg55g1-edl/edl_xml.py backup <dir> abl_a,abl_b,persist,devinfo,misc,modemst1,modemst2,fsg,fsc,keystore,frp,uefivarstore,secdata,storsec,ssd,cdt,ddr,splash,logfs,limits,limits-cdsp,apdp,dip,spunvm,dtbo_a,vendor_boot_a
-fh_loader.exe --port=\\.\COMn --memoryname=UFS --sendxml=read_parts.xml --convertprogram2read --search_path=<dir> --mainoutputdir=<dir> --noprompt --zlpawarehost=1
-fh_loader.exe --port=\\.\COMn --reset --noprompt --zlpawarehost=1   # boot Android again
+adb reboot edl                                         # the screen stays black; a new COM port means it is in EDL
+py -3 tools\edl\hako_edl.py rg55g1 backup <dir>          # with the loader in <dir>
 ```
 
-- `--convertprogram2read` turns the `<program>` (write) entries of the XML into reads. Always pass it for a backup.
-- Record the sha256 of every file and keep a second copy elsewhere on the PC (the only way back for this unit).
+- It reads the GPT (LUN 0–6) and 26 partitions, writes `SHA256SUMS`, and reboots the device at the end.
+- The first time this was done by hand: QSaharaServer sent the loader, then an XML that reads the GPT and one that reads the partitions
+  found in it went to `fh_loader --convertprogram2read` (which turns the `<program>` writes into reads).
+- Keep a second copy elsewhere on the PC (the only way back for this unit).
 - `abl_a` / `abl_b` are on LUN 4 (4.1): the same data ROCKNIX's script would `dd`, read over EDL.
 
 ### 3.3 Write OpenABL over EDL (after the person agrees)
 
 ```powershell
-python3 tools/rg55g1-edl/edl_xml.py flash <dir> abl_signed-SM4450.elf abl_a,abl_b
 adb reboot edl
-QSaharaServer.exe -p \\.\COMn -s 13:xbl_s_devprg_ns.melf
-fh_loader.exe --port=\\.\COMn --memoryname=UFS --sendxml=write_abl_signed-SM4450.xml --search_path=<dir> --mainoutputdir=<dir> --noprompt --zlpawarehost=1
-fh_loader.exe --port=\\.\COMn --memoryname=UFS --sendxml=readback_abl_signed-SM4450.xml --convertprogram2read --search_path=<dir> --mainoutputdir=<dir> --noprompt --zlpawarehost=1
+py -3 tools\edl\hako_edl.py rg55g1 flash <dir> abl_signed-SM4450.elf   # checks the current ABL is stock, writes, reads back, compares with OpenABL (8d7323…)
 ```
 
-1. Check that the sha256 of `readback_abl_a.bin` and `readback_abl_b.bin` is OpenABL's (`8d7323…`).
-2. Hold volume down, reset with `fh_loader.exe --port=\\.\COMn --reset ...`, and check that the OpenABL menu appears.
-3. To go back to stock, write the backup's `abl_a.img` / `abl_b.img` the same way
-   (`edl_xml.py flash <dir> abl_a.img abl_a`, likewise for `abl_b`).
+1. Check `RESULT=SUCCESS`. The device reboots at the end; hold volume down and check that the OpenABL menu appears.
+2. To go back to stock: `hako_edl.py rg55g1 restore <dir>` (writes the backup's `abl_a.img` / `abl_b.img` back).
 
 > OpenABL's "Device model" list comes from the dtbs on the inserted microSD card. Without a card it says `no device trees found`; that is not an error.
 

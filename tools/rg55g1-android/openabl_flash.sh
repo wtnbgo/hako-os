@@ -5,7 +5,7 @@
 #
 # NOTE: on stock firmware V3.0.9 the runner stays in the SELinux domain system_app and
 # cannot read or write any partition, so this script stops at the backup check. The
-# RG 55G1 was backed up and flashed over EDL instead (tools/rg55g1-edl/, docs chapter 5).
+# RG 55G1 was backed up and flashed over EDL instead (tools/edl/hako_edl.py, docs chapters 1 and 5).
 #
 # Refuses to write unless:
 #   - the device is an Anbernic RG 55G1 on SM4450 (platform "parrot", read on the device)

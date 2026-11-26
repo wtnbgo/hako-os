@@ -17,8 +17,8 @@ Every component is a .deb.
 | Retroid Pocket Mini (V1) | SM8250 (Snapdragon 865) | `rpmini-dev.img` | main target: display, touch, pad, audio, USB, Wi-Fi, Bluetooth, GPU, suspend | suspend is shallow (s2idle only); power off to keep the battery |
 | Anbernic RG 55G1 | SM4450 (Snapdragon G1 Gen 2) | `rg55g1-dev.img` | display, touch, pad, speakers, USB, GPU (hako-mesa), clock | headphones do not take over from the speakers; fan always on; Wi-Fi connection not tried yet |
 
-How each device was brought up: [docs chapter 1](docs/en/1-device-setup.md) (Retroid Pocket Mini) and
-[chapter 5](docs/en/5-example-rg55g1.md) (RG 55G1, OpenABL written over EDL).
+Setting up a device (backup and OpenABL over EDL from a Windows or Linux PC, then the image): [docs chapter 1](docs/en/1-device-setup.md).
+How the RG 55G1 was brought up: [chapter 5](docs/en/5-example-rg55g1.md).
 
 | dir | content |
 |---|---|
@@ -28,7 +28,7 @@ How each device was brought up: [docs chapter 1](docs/en/1-device-setup.md) (Ret
 | repo/     | reprepro config; built .debs are published here (repo/dists, repo/pool are not tracked) |
 | elbe/     | ELBE project XMLs (per board: rpmini-dev.xml, rg55g1-dev.xml) |
 | scripts/  | build / deploy / flash helpers |
-| tools/    | device setup: Android-side scripts (backup, OpenABL flash/restore), EDL helper (tools/rg55g1-edl) |
+| tools/    | device setup: tools/edl/hako_edl.py (backup, OpenABL flash/restore over EDL; QPST on Windows, qdl on Linux), Android-side fallback scripts |
 | docs/     | documentation (en / ja) |
 
 ## Packages
@@ -65,7 +65,7 @@ bash scripts/dev-update.sh <pkg>...     # update a device on the USB link (192.1
 
 Documentation: [English](docs/en/README.md) / [日本語](docs/ja/README.md)
 
-1. preparing a Retroid Pocket Mini (backup, OpenABL, writing the image) — this part is specific to that device
+1. preparing a device (backup and OpenABL over EDL, writing the image)
 2. the daily development loop and the samples (SDL3, LÖVE, raylib, Siv3D, Kirikiri Z)
 3. packaging an app and building an image with it
 4. bringing up another OpenABL + Qualcomm handheld

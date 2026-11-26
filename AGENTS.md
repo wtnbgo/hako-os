@@ -9,7 +9,7 @@ When you change a document, update both languages.
 
 hako: Debian trixie (arm64) for handheld game consoles with Qualcomm SoCs booted by OpenABL.
 Everything on the device is a .deb from `packages/` or Debian; images are built with ELBE.
-Current board: Retroid Pocket Mini V1 (SM8250), board package `rpmini-bsp`.
+Boards: Retroid Pocket Mini V1 (SM8250, board package `rpmini-bsp`) and Anbernic RG 55G1 (SM4450, `rg55g1-bsp`).
 
 ## Map
 
@@ -24,14 +24,16 @@ Current board: Retroid Pocket Mini V1 (SM8250), board package `rpmini-bsp`.
 | `kernel/` | kernel .deb (pinned upstream + ROCKNIX patches) |
 | `elbe/<board>-<flavor>.xml` | image definitions |
 | `scripts/` | `build-packages.sh [pkg..]` (skips unchanged versions), `publish-repo.sh`, `dev-update.sh [pkg..]`, `[BOARD=<board>] build-image.sh <flavor>` (needs the kernel .deb from `kernel/build.sh` first) |
-| `tools/rpmini-android/` | Android-side scripts: backup, OpenABL flash/restore (run on the device as root) |
+| `tools/edl/hako_edl.py` | backup / check / OpenABL flash / restore over EDL (Windows: QPST, Linux: qdl); per-device table `DEVICES` |
+| `tools/rpmini-android/` | fallback: Android-side scripts (run on the device as root) |
 
 ## Rules that matter
 
 - **Ask the human before anything physical or irreversible**: flashing ABL/partitions, writing an SD card,
   rebooting into another OS, and any test that needs someone to press buttons, touch the screen or listen.
   Say what to do and what to look for, wait for "ready", then run it.
-- Never touch the device's stock partitions except through `tools/rpmini-android/` with a verified backup.
+- Never touch the device's stock partitions except through `tools/edl/hako_edl.py` (or the Android fallback scripts) with a verified
+  backup, and only after the human agrees to the write (`flash` / `restore`). `backup` and `check` only read.
 - Bump `debian/changelog` whenever a package changes, or apt will not reinstall it
   (`dev-update.sh --reinstall` for a quick try).
 - Do not run `build-packages.sh` / `publish-repo.sh` / `dev-update.sh` while `build-image.sh` is running:

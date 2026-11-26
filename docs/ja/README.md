@@ -9,7 +9,7 @@ hako は、OpenABL で起動できる Qualcomm 機の携帯ゲーム機で Debia
 
 | # | 文書 | 内容 |
 |---|---|---|
-| 1 | [1-実機の準備.md](1-実機の準備.md) | バックアップ → OpenABL → dev イメージを SD に書いて起動するまで (Retroid Pocket Mini 専用) |
+| 1 | [1-実機の準備.md](1-実機の準備.md) | EDL でバックアップ → OpenABL → dev イメージを SD に書いて起動するまで (Retroid Pocket Mini、RG 55G1。PC は Windows か Linux) |
 | 2 | [2-開発の基本とサンプル.md](2-開発の基本とサンプル.md) | 実機にアプリを入れて動かす日々の手順と、各サンプル (SDL3 / LÖVE / raylib / Siv3D / 吉里吉里Z) の扱い方 |
 | 3 | [3-アプリをまとめる.md](3-アプリをまとめる.md) | 作ったものを .deb にし、それを入れたイメージ 1 つにまとめる手順 |
 | 4 | [4-新しい機種への対応.md](4-新しい機種への対応.md) | 同じ系統 (OpenABL + Qualcomm) の別の機種向けにイメージを用意する手順 |

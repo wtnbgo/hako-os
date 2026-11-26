@@ -68,10 +68,20 @@ Copy `packages/rpmini-bsp/`, rename it, and adapt its contents to the new device
 - Build with `BOARD=<device> bash scripts/build-image.sh dev` (uses `elbe/<device>-dev.xml`).
 - For the first boot, select the device in the OpenABL menu and boot.
 
-### 5. Android-side scripts
+### 5. EDL settings
 
-Copy `tools/rpmini-android/` to create `tools/<device>-android/`, and change the device model (`ro.product.model`), SoC
-(`ro.board.platform`), and the OpenABL elf and its hash to those of the device. Do not remove the device model and SoC checks.
+Add the device to the device table (`DEVICES`) in `tools/edl/hako_edl.py`.
+
+| Field | Content |
+|---|---|
+| `luns` | number of UFS LUNs (reading the GPT over EDL fails on a LUN that does not exist, so it shows) |
+| `loader` / `loader_sha256` | file name and hash of the EDL loader; often found in the manufacturer's recovery package (for QFIL) |
+| `openabl_sha256` / `openabl_size` | the OpenABL elf for that SoC |
+| `backup` | partitions to save. Always include ABL and the unit-specific ones (persist, modemst, fsg, devinfo, ...) |
+
+- Start with `backup` and `check` only (read only), and compare with what Android can read (`/dev/block/by-name/`) if possible.
+- How to enter EDL (key combination or `adb reboot edl`) also differs per device; add it to the table in [1-device-setup.md](1-device-setup.md).
+- The Android root scripts (`tools/rpmini-android/`) are a fallback. They do not work on every device or firmware (chapter 5, 1.2).
 
 ### 6. Verifying operation
 
